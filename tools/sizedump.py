@@ -51,9 +51,11 @@ def fit(f,p,x,y):
 # ------------------------------------------------------------------------
 
 # Load data
-path = ""
-x  = loadtxt(path,unpack=True, usecols=[0], skiprows=1)
-y = range(len(x))
+path = "./checkpoints"
+y = loadtxt(path,unpack=True, usecols=[0], skiprows=1)
+x = array(range(len(y)))
+
+print x,y
 
 # Create plot
 plt = matplotlib.pyplot.figure()
@@ -71,8 +73,11 @@ ax.set_title(title)
 ax.set_xlabel(xaxis)
 ax.set_ylabel(yaxis)
 
+label1="File size"
+
 # Plot errobars
-ax.errorbar(x,y,xerr=xe,yerr=ye, fmt='c', alpha=.3, label=label1)
+# ax.errorbar(x,y,xerr=xe,yerr=ye, fmt='c', alpha=.3, label=label1)
+ax.plot(x,y, 'k', alpha=.3, label=label1)
 
 # Create fit function for exponential data
 f = lambda p, x: p[0]+ p[1]*exp(-x/p[2])
@@ -101,7 +106,7 @@ ax.xaxis.grid(color='gray', linestyle='dashed')
 # Save  plot
 plt.set_facecolor('white')
 plt.savefig(path[:-8]+'.png', bbox_inches=0)
-
+show()
  
 
 
