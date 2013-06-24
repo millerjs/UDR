@@ -67,8 +67,8 @@ plt = matplotlib.pyplot.figure()
 ax = axes()
 
 # Resize plot
-xlim(min(x), max(x))
-ylim(min(y), max(y)*1.1)
+# xlim(min(x), max(x))
+# ylim(min(y), max(y)*1.1)
 
 # Label PLot
 title = "File Transfer Rate: SCP"
@@ -83,7 +83,7 @@ label2="Transfer rate"
 
 # Plot errobars
 # ax.errorbar(x,y,xerr=xe,yerr=ye, fmt='c', alpha=.3, label=label1)
-# ax.plot(x,y, 'k-.', alpha=.3, label=label1)
+ax.plot(x,y, 'k-.', alpha=.3, label=label1)
 ax.plot(x2,y2, 'k', alpha=.3, label=label2)
 
 # Create fit function for exponential data
