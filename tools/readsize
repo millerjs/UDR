@@ -1,11 +1,12 @@
 #!/bin/bash
 
-
-file="readsize"
-echo "" > checkpoints
+echo $1
+checkpoint=$1
+file="/home/jmiller/1GBfile"
+echo "" > $checkpoint
 while true
 do
-    du $file  >> checkpoints
-    tail -1 checkpoints
+    du $file  >> $checkpoint
+    tail -1 $checkpoint
     sleep 1
 done

@@ -50,8 +50,10 @@ def fit(f,p,x,y):
 # ------------------------------------------------------------------------
 
 # Load data
-path = "./checkpoints"
+path = "./scp"
+path2 = "./rsync"
 y = loadtxt(path,unpack=True, usecols=[0], skiprows=1)
+yb = loadtxt(path2,unpack=True, usecols=[0], skiprows=1)
 
 y = y*7.62939453e-6
 y2 = []
@@ -61,6 +63,17 @@ for i in range(2,len(y)):
 
 x = array(range(len(y)))
 x2 = array(range(len(y2)))
+
+
+yb = yb*7.62939453e-6
+y2b = []
+for i in range(2,len(yb)):
+    y2b.append(yb[i]-yb[i-1])
+
+
+x = array(range(len(yb)))
+x2b = array(range(len(y2b)))
+
 
 # Create plot
 plt = matplotlib.pyplot.figure()
@@ -78,17 +91,18 @@ ax.set_title(title)
 ax.set_xlabel(xaxis)
 ax.set_ylabel(yaxis)
 
-label1="File size"
-label2="Transfer rate"
+label1="SCP Transfer rate"
+label2="RSYNC Transfer rate"
 
 # Plot errobars
 # ax.errorbar(x,y,xerr=xe,yerr=ye, fmt='c', alpha=.3, label=label1)
 # ax.plot(x,y, 'k-.', alpha=.3, label=label1)
-ax.plot(x2,y2, 'k', alpha=.3, label=label2)
+ax.plot(x2,y2, 'g', alpha=.3, label=label1)
+ax.plot(x2b,y2b, 'b', alpha=.3, label=label2)
 
 # Create fit function for exponential data
-f = lambda p, x: p[0]+ p[1]*exp(-x/p[2])
-p = fit(f, [.1, 250, 1], x, y)
+# f = lambda p, x: p[0]+ p[1]*exp(-x/p[2])
+# p = fit(f, [.1, 250, 1], x, y)
 
 # Annotate curve
 # chsqr = chisqr(f,p,x,y,3)
