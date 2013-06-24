@@ -106,7 +106,7 @@ ax.xaxis.grid(color='gray', linestyle='dashed')
 # Save  plot
 plt.set_facecolor('white')
 plt.savefig(path[:-8]+'.png', bbox_inches=0)
-show()
+# show()
  
 
 
