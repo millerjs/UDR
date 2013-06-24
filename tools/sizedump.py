@@ -60,6 +60,7 @@ for i in range(2,len(y)):
 
 
 x = array(range(len(y)))
+x2 = array(range(len(y2)))
 
 # Create plot
 plt = matplotlib.pyplot.figure()
@@ -78,10 +79,12 @@ ax.set_xlabel(xaxis)
 ax.set_ylabel(yaxis)
 
 label1="File size"
+label2="Transfer rate"
 
 # Plot errobars
 # ax.errorbar(x,y,xerr=xe,yerr=ye, fmt='c', alpha=.3, label=label1)
-ax.plot(x,y, 'k', alpha=.3, label=label1)
+ax.plot(x,y, 'k-.', alpha=.3, label=label1)
+ax.plot(x2,y2, 'k', alpha=.3, label=label2)
 
 # Create fit function for exponential data
 f = lambda p, x: p[0]+ p[1]*exp(-x/p[2])
