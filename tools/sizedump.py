@@ -54,7 +54,6 @@ path = "./checkpoints"
 y = loadtxt(path,unpack=True, usecols=[0], skiprows=1)
 x = array(range(len(y)))
 
-
 # Create plot
 plt = matplotlib.pyplot.figure()
 ax = axes()
@@ -100,7 +99,7 @@ ax.xaxis.grid(color='gray', linestyle='dashed')
 # Save  plot
 plt.set_facecolor('white')
 plt.savefig(path[:-8]+'.png', bbox_inches=0)
-# show()
+show()
  
 
 
