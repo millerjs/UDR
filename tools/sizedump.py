@@ -52,6 +52,13 @@ def fit(f,p,x,y):
 # Load data
 path = "./checkpoints"
 y = loadtxt(path,unpack=True, usecols=[0], skiprows=1)
+
+y = y*7.62939453e-6
+y2 = []
+for i in range(2,len(y)):
+    y2.append(y[i]-y[i-1])
+
+
 x = array(range(len(y)))
 
 # Create plot
@@ -65,7 +72,7 @@ ylim(min(y), max(y)*1.1)
 # Label PLot
 title = "File Transfer Rate: SCP"
 xaxis = "Time (s)"
-yaxis = "Transfered file size (KB)"
+yaxis = "Transfered file size (Gb)"
 ax.set_title(title)
 ax.set_xlabel(xaxis)
 ax.set_ylabel(yaxis)
