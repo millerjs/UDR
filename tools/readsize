@@ -1,0 +1,11 @@
+#!/bin/bash
+
+
+file="readsize"
+echo "" > checkpoints
+while true
+do
+    du $file  >> checkpoints
+    tail -1 checkpoints
+    sleep 1
+done
