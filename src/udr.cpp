@@ -367,9 +367,10 @@ int main(int argc, char* argv[]) {
       // protocol_argv[protocol_idx++] = "--blocking-io";
 
       //scp_argv[scp_idx++] = curr_options.scp_timeout;
-
+      char* arg_path  = "/tmp/recv_args";
+      
       protocol_argv[protocol_idx++] = "-S";
-      protocol_argv[protocol_idx++] = "/home/jmiller/args";
+      protocol_argv[protocol_idx++] = arg_path;
       // protocol_argv[protocol_idx++] = strdup(curr_options.udr_program_src);
 
       char udr_scp_args1[100];
@@ -399,13 +400,20 @@ int main(int argc, char* argv[]) {
       // 	      udr_scp_args2,
       // 	      curr_options.key_filename);
 
-
-      // FILE *args = fopen("args", "rw");
-      // if (args){
-      // 	fprintf(args, "%s", );
-      // 	fclose(args);
-      // }
-
+      FILE *args = fopen(arg_path, "w");
+       if (args){
+	 // /home/jmiller/UDR/src/udr -s 9008 -p .udr_key
+	 fprintf(args, "%s -s %s -p %s %s scp", 
+		 curr_options.udr_program_src,
+		 curr_options.port_num, 
+		 curr_options.key_filename, 
+		 curr_options.host);
+       } else {
+	 fprintf(stderr, "Unable to print to argument file: %s\n", arg_path);
+	 exit(1);
+       }
+       fclose(args);
+	
       
       // sprintf(protocol_argv[protocol_idx], "%s %s %s %s", 
       // 	      // curr_options.udr_program_src, 

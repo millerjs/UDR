@@ -250,9 +250,6 @@ int run_sender(UDR_Options * udr_options, unsigned char * passphrase, const char
     return 1;
   }
 
-  fprintf(stderr, " PORT: %s\n", udr_options->port_num);
-  fprintf(stderr, " HOST: %s\n", udr_options->host);
-
   freeaddrinfo(peer);
 
   // not using CC method yet
