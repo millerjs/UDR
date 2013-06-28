@@ -22,43 +22,54 @@ and limitations under the License.
 #include <netdb.h>
 #include <limits.h>
 
+enum protocol_type {NONE, SCP, RSYNC};
+
 struct UDR_Options{
-    int start_port;
-    int end_port;
-    int timeout;
+  int start_port;
+  int end_port;
+  int timeout;
+  int protocol;
 
-    bool tflag;
-    bool sflag;
-    bool verbose;
-    bool encryption;
-    //bool server;
-    bool version_flag;
-    bool server_connect;
+  bool tflag;
+  bool sflag;
+  bool verbose;
+  bool encryption;
+  //bool server;
+  bool version_flag;
+  bool server_connect;
 
-    char udr_program_src[PATH_MAX+1];
-    char udr_program_dest[PATH_MAX+1];
-    char ssh_program[PATH_MAX+1];
-    char rsync_program[PATH_MAX+1];
-    char rsync_timeout[PATH_MAX+1];
-    char shell_program[PATH_MAX+1];
+  char udr_program_src[PATH_MAX+1];
+  char udr_program_dest[PATH_MAX+1];
+  char ssh_program[PATH_MAX+1];
 
-    char key_base_filename[PATH_MAX+1];
-    char key_filename[PATH_MAX+1];
+  char scp_program[PATH_MAX+1];
+  char scp_timeout[PATH_MAX+1];
 
-    char host[PATH_MAX+1];
-    char port_num[NI_MAXSERV+1];
-    char username[PATH_MAX+1];
-    char which_process[PATH_MAX+1];
-    char version[PATH_MAX+1];
-    char server_dir[PATH_MAX+1];
-    char server_port[NI_MAXSERV+1];
+  char rsync_program[PATH_MAX+1];
+  char rsync_timeout[PATH_MAX+1];
 
-    char server_config[PATH_MAX+1];
+  char shell_program[PATH_MAX+1];
 
-    char encryption_type[PATH_MAX+1];
+  char key_base_filename[PATH_MAX+1];
+  char key_filename[PATH_MAX+1];
 
-    uid_t rsync_uid;
-    gid_t rsync_gid;
+  char host[PATH_MAX+1];
+  char port_num[NI_MAXSERV+1];
+  char username[PATH_MAX+1];
+  char which_process[PATH_MAX+1];
+  char version[PATH_MAX+1];
+  char server_dir[PATH_MAX+1];
+  char server_port[NI_MAXSERV+1];
+
+  char server_config[PATH_MAX+1];
+
+  char encryption_type[PATH_MAX+1];
+
+  uid_t rsync_uid;
+  gid_t rsync_gid;
+
+  uid_t scp_uid;
+  gid_t scp_gid;
 
 };
 

@@ -50,9 +50,9 @@ char * get_udr_cmd(UDR_Options * udr_options) {
     strcat(udr_args, "-v");
 
   if(udr_options->server_connect) {
-    sprintf(udr_args, "%s %s", udr_args, "-t rsync");
+    sprintf(udr_args, "%s %s", udr_args, "-t scp");
   }  else {
-    sprintf(udr_args, "%s -a %d -b %d %s", udr_args, udr_options->start_port, udr_options->end_port, "-t rsync");
+    sprintf(udr_args, "%s -a %d -b %d %s", udr_args, udr_options->start_port, udr_options->end_port, "-t scp");
   }
 
   char* udr_cmd = (char *) malloc(strlen(udr_options->udr_program_dest) + strlen(udr_args) + 3);
@@ -67,7 +67,13 @@ void print_version() {
 
 //only going to go from local -> remote and remote -> local, remote <-> remote maybe later, but local -> local doesn't make sense for UDR
 int main(int argc, char* argv[]) {
-  enum protocol_type {NONE, SCP, RSYNC};
+
+  char** temp = argv;
+  for (int i = 0; i < argc; i ++){
+    fprintf(stderr, "%s ", temp[i]);
+
+  }
+
   int protocol = NONE;
   int protocol_arg_idx = -1;
   
@@ -75,12 +81,12 @@ int main(int argc, char* argv[]) {
     usage();
 
   for (int i = 0; i < argc; i++) {
-    if (strcmp(argv[i], "rsync") == 0) {
+    if (!strcmp(argv[i], "rsync")) {
       protocol = RSYNC;
       protocol_arg_idx = i;
       break;
     }
-    if (strcmp(argv[i], "scp") == 0) {
+    if (!strcmp(argv[i], "scp")) {
       protocol = SCP;
       protocol_arg_idx = i;
       break;
@@ -90,11 +96,12 @@ int main(int argc, char* argv[]) {
   if (protocol == NONE) {
     usage();
     // rsync_arg_idx = argc;
-  }
+  } 
 
   //now get the options using udr_options.
   struct UDR_Options curr_options;
   get_udr_options(&curr_options, argc, argv, protocol_arg_idx);
+  curr_options.protocol = protocol;
 
   if (curr_options.version_flag)
     print_version();
@@ -345,73 +352,76 @@ int main(int argc, char* argv[]) {
 // 				 SCP
 // ------------------------------------------------------------------------
 
+      // protocol_argv[protocol_idx++] = "--blocking-io";
+
+      //scp_argv[scp_idx++] = curr_options.scp_timeout;
+
+      protocol_argv[protocol_idx++] = "-S";
+      protocol_argv[protocol_idx++] = "/home/jmiller/args";
+      // protocol_argv[protocol_idx++] = strdup(curr_options.udr_program_src);
 
       char udr_scp_args1[100];
-      char udr_scp_args2[100];
 
-      // blocking ?
+      if (curr_options.encryption)
+	strcpy(udr_scp_args1, "-n ");
+      else
+	udr_scp_args1[0] = '\0';
 
-      //rsync_argv[rsync_idx++] = curr_options.rsync_timeout;
+      // if (curr_options.verbose)
+	// strcat(udr_scp_args1, "-v ");
 
-      // add encryption tag?
+      strcat(udr_scp_args1, "-s");
 
-
-      // if (curr_options.encryption)
-      // 	strcpy(udr_scp_args1, "-n ");
-      // else
-      // 	udr_scp_args1[0] = '\0';
-
-      if (curr_options.verbose)
-	strcat(udr_scp_args1, "-v ");
-
-      // no space splitting; wildcards only
-
-
-      // preserve permissions
-      
+      const char * udr_scp_args2 = "-p";
         
-      
-      // protocol_argv[protocol_idx] = (char*) malloc(strlen(curr_options.udr_program_src) 
-      // 						   + strlen(udr_scp_args1) 
-      // 						   + strlen(curr_options.port_num) 
-      // 						   + strlen(udr_scp_args2) 
-      // 						   + strlen(curr_options.key_filename) + 6);
+      protocol_argv[protocol_idx] = (char*) malloc(strlen(curr_options.udr_program_src) + 
+      						   strlen(udr_scp_args1) + 
+      						   strlen(curr_options.port_num) + 
+      						   strlen(udr_scp_args2) + 
+      						   strlen(curr_options.key_filename) + 6);
 
-      // sprintf(protocol_argv[protocol_idx], "%s %s %s %s %s", 
+      // sprintf(protocol_argv[protocol_idx], "%s %s", 
       // 	      curr_options.udr_program_src, 
-      // 	      udr_scp_args1, 
+      // 	      udr_scp_args1);
       // 	      curr_options.port_num, 
-      // 	      udr_scp_args2, 
+      // 	      udr_scp_args2,
       // 	      curr_options.key_filename);
 
 
-      // protocol_idx++;
+      // FILE *args = fopen("args", "rw");
+      // if (args){
+      // 	fprintf(args, "%s", );
+      // 	fclose(args);
+      // }
 
-      // ??
+      
+      // sprintf(protocol_argv[protocol_idx], "%s %s %s %s", 
+      // 	      // curr_options.udr_program_src, 
+      // 	      udr_scp_args1, 
+      // 	      curr_options.port_num, 
+      // 	      udr_scp_args2,
+      // 	      curr_options.key_filename);
+
+      // protocol_idx++;
+      
+      // fprintf(stderr, "first_source_idx: %d\n", first_source_idx);
       for (int i = protocol_arg_idx + 1; i < argc; i++) {
-	protocol_argv[protocol_idx] = (char*) malloc(strlen(argv[i]) + 1);
-	protocol_argv[protocol_idx] = argv[i];
-	protocol_idx++;
+      	protocol_argv[protocol_idx] = (char*) malloc(strlen(argv[i]) + 1);
+      	protocol_argv[protocol_idx] = argv[i];
+      	protocol_idx++;
       }
 
       protocol_argv[protocol_idx] = NULL;
 
-      for (int i = 0; i < protocol_arg_idx; i ++)
-	fprintf(stderr,"%s ", protocol_argv[i]);
+      pid_t local_scp_pid = fork_execvp("scp", 
+					protocol_argv, 
+					&parent_to_child, 
+					&child_to_parent);
 
-      char *scp_program = "scp";
-
-      pid_t local_scp_pid  = fork_execvp(scp_program,
-					 protocol_argv,
-					 &parent_to_child, 
-					 &child_to_parent);
-
-      
-      // Print verbocity stuff
       if (curr_options.verbose)
 	fprintf(stderr, "%s scp pid: %d\n", curr_options.which_process, local_scp_pid);
 
-      //  wait for the scp process to end
+      //at this point this process should wait for the scp process to end
       int buf_size = 4096;
       char scp_out_buf[buf_size];
       int bytes_read, bytes_written;
@@ -420,6 +430,8 @@ int main(int argc, char* argv[]) {
       while ((bytes_read = read(child_to_parent, scp_out_buf, buf_size)) > 0) {
 	bytes_written = write(STDOUT_FILENO, scp_out_buf, bytes_read);
       }
+
+
 
       int scp_exit_status;
 
@@ -431,8 +443,6 @@ int main(int argc, char* argv[]) {
 	}
       } while (!WIFEXITED(scp_exit_status) && !WIFSIGNALED(scp_exit_status));
       exit(WEXITSTATUS(scp_exit_status));
-
-
       
       
     }

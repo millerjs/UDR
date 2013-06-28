@@ -91,8 +91,8 @@ ax.set_title(title)
 ax.set_xlabel(xaxis)
 ax.set_ylabel(yaxis)
 
-label1="SCP Transfer rate"
-label2="RSYNC Transfer rate"
+label1="SCP UDR Transfer rate"
+label2="UDR Transfer rate"
 
 # Plot errobars
 # ax.errorbar(x,y,xerr=xe,yerr=ye, fmt='c', alpha=.3, label=label1)
