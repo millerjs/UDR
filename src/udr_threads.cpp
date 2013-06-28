@@ -453,9 +453,13 @@ int run_receiver(UDR_Options * udr_options) {
   }
   else{
 
-    rsync_cmd = (char *)malloc(strlen(cmd) + 1);
+    fprintf(stderr, "protocol %d \n", udr_options->protocol);
+    
+    //if (!strcmp(cmd, "scp "))
+    if (udr_options->protocol == SCP)
+    cmd = strdup("scp -t -- ./");
 
-    fprintf(stderr, "CONNECTING: %s\n", rsync_cmd);
+    rsync_cmd = (char *)malloc(strlen(cmd) + 1);
 
     strcpy(rsync_cmd, cmd);
   }
@@ -473,8 +477,6 @@ int run_receiver(UDR_Options * udr_options) {
   //now fork and exec the rsync on the remote side using sh (so that wildcards will be expanded properly)
   int child_to_parent, parent_to_child;
 
-
-  fprintf(stderr, "Forking: %s", udr_options->shell_program);
   int rsync_pid = fork_execvp(udr_options->shell_program, sh_cmd, &parent_to_child, &child_to_parent);
 
   //now if we're in server mode need to drop privileges if specified

@@ -2,7 +2,7 @@
 
 echo $1
 checkpoint=$1
-file="/home/jmiller/1GBfile"
+file="/home/jmiller/10GBfile"
 echo "" > $checkpoint
 while true
 do

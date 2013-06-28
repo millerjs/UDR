@@ -50,9 +50,15 @@ char * get_udr_cmd(UDR_Options * udr_options) {
     strcat(udr_args, "-v");
 
   if(udr_options->server_connect) {
-    sprintf(udr_args, "%s %s", udr_args, "-t scp");
+    if (udr_options->protocol == SCP)
+      sprintf(udr_args, "%s %s", udr_args, "-t scp");
+    else 
+      sprintf(udr_args, "%s %s", udr_args, "-t rsync");
   }  else {
-    sprintf(udr_args, "%s -a %d -b %d %s", udr_args, udr_options->start_port, udr_options->end_port, "-t scp");
+    if (udr_options->protocol == SCP)
+      sprintf(udr_args, "%s -a %d -b %d %s", udr_args, udr_options->start_port, udr_options->end_port, "-t scp");
+    else
+      sprintf(udr_args, "%s -a %d -b %d %s", udr_args, udr_options->start_port, udr_options->end_port, "-t rsync");
   }
 
   char* udr_cmd = (char *) malloc(strlen(udr_options->udr_program_dest) + strlen(udr_args) + 3);
@@ -80,19 +86,25 @@ int main(int argc, char* argv[]) {
   if (argc < 1)
     usage();
 
+
   for (int i = 0; i < argc; i++) {
+    
     if (!strcmp(argv[i], "rsync")) {
+
+      fprintf(stderr, "============= RSYNC \n");
       protocol = RSYNC;
       protocol_arg_idx = i;
       break;
-    }
-    if (!strcmp(argv[i], "scp")) {
+    } else if (!strcmp(argv[i], "scp")) {
+
+      fprintf(stderr, "============= SCP \n");
       protocol = SCP;
       protocol_arg_idx = i;
       break;
     }
   }
 
+  
   if (protocol == NONE) {
     usage();
     // rsync_arg_idx = argc;
@@ -108,7 +120,7 @@ int main(int argc, char* argv[]) {
 
   // if (!use_rsync)
   //   usage();
-
+  fprintf(stderr, "protocol %d %d \n", curr_options.protocol, RSYNC);
   if (curr_options.tflag) {
     return run_receiver(&curr_options);
   }//now for server mode

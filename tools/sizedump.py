@@ -71,7 +71,7 @@ for i in range(2,len(yb)):
     y2b.append(yb[i]-yb[i-1])
 
 
-x = array(range(len(yb)))
+xb = array(range(len(yb)))
 x2b = array(range(len(y2b)))
 
 
@@ -97,8 +97,8 @@ label2="UDR Transfer rate"
 # Plot errobars
 # ax.errorbar(x,y,xerr=xe,yerr=ye, fmt='c', alpha=.3, label=label1)
 # ax.plot(x,y, 'k-.', alpha=.3, label=label1)
-ax.plot(x2,y2, 'g', alpha=.3, label=label1)
-ax.plot(x2b,y2b, 'b', alpha=.3, label=label2)
+ax.plot(x,y, 'g', alpha=.3, label=label1)
+ax.plot(xb,yb, 'b', alpha=.3, label=label2)
 
 # Create fit function for exponential data
 # f = lambda p, x: p[0]+ p[1]*exp(-x/p[2])
@@ -115,15 +115,15 @@ ax.plot(x2b,y2b, 'b', alpha=.3, label=label2)
 #                             connectionstyle="arc3,rad=.1"))
 
 # Create Legend
-ax.legend(loc='upper center', bbox_to_anchor=(0.85, .95),
+ax.legend(loc='upper center', bbox_to_anchor=(0.85, .35),
           ncol=1, fancybox=True, shadow=True)    
 ax.yaxis.grid(color='gray', linestyle='dashed')
 ax.xaxis.grid(color='gray', linestyle='dashed')
 
 # Save  plot
 plt.set_facecolor('white')
-plt.savefig(path[:-8]+'.png', bbox_inches=0)
-show()
+plt.savefig('rates.png', bbox_inches=0)
+# show()
  
 
 
