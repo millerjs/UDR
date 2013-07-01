@@ -383,8 +383,15 @@ int main(int argc, char* argv[]) {
       // char* arg_path  = (char*)malloc(strlen((path.c_str()+10)*sizeof(char)));
       // sprintf(arg_path, "%s/recv_args", path.c_str());
       
-      char* arg_path = "./";
+      char* arg_path = "/tmp/arg_args";
+      char* chmod = (char*)malloc(sizeof(char)*(strlen(arg_path)+10));
+      sprintf(chmod, "chmod +x %s", arg_path);
 
+      if (!system(chmod)){
+	fprintf(stderr, "Unable to give udr wrapper exec permissions: %s", arg_path);
+	exit(1);
+      }
+      
       protocol_argv[protocol_idx++] = "-S";
       protocol_argv[protocol_idx++] = arg_path;
       // protocol_argv[protocol_idx++] = strdup(curr_options.udr_program_src);
