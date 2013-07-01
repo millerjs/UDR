@@ -51,29 +51,24 @@ def fit(f,p,x,y):
 
 # Load data
 path = "./scp"
+ya = loadtxt(path,unpack=True, usecols=[0], skiprows=1)
+ya = ya*7.62939453e-6
+xa = array(range(len(ya)))
+
 path2 = "./rsync"
-y = loadtxt(path,unpack=True, usecols=[0], skiprows=1)
 yb = loadtxt(path2,unpack=True, usecols=[0], skiprows=1)
-
-y = y*7.62939453e-6
-y2 = []
-for i in range(2,len(y)):
-    y2.append(y[i]-y[i-1])
-
-
-x = array(range(len(y)))
-x2 = array(range(len(y2)))
-
-
 yb = yb*7.62939453e-6
-y2b = []
-for i in range(2,len(yb)):
-    y2b.append(yb[i]-yb[i-1])
-
-
 xb = array(range(len(yb)))
-x2b = array(range(len(y2b)))
 
+path3 = "./scpNORM"
+yc = loadtxt(path3,unpack=True, usecols=[0], skiprows=1)
+yc = yc*7.62939453e-6
+xc = array(range(len(yc)))
+
+path4 = "./rsyncNORM"
+yd = loadtxt(path4,unpack=True, usecols=[0], skiprows=1)
+yd = yd*7.62939453e-6
+xd = array(range(len(yd)))
 
 # Create plot
 plt = matplotlib.pyplot.figure()
@@ -93,12 +88,17 @@ ax.set_ylabel(yaxis)
 
 label1="SCP UDR Transfer rate"
 label2="UDR Transfer rate"
+label3="scp normal rate"
+label4="rsync normal rate"
+
 
 # Plot errobars
 # ax.errorbar(x,y,xerr=xe,yerr=ye, fmt='c', alpha=.3, label=label1)
 # ax.plot(x,y, 'k-.', alpha=.3, label=label1)
-ax.plot(x,y, 'g', alpha=.3, label=label1)
-ax.plot(xb,yb, 'b', alpha=.3, label=label2)
+ax.plot(xa,ya, 'g', alpha=.8, label=label1)
+ax.plot(xb,yb, 'b', alpha=.8, label=label2)
+ax.plot(xc,yc, 'g-.', alpha=.8, label=label3)
+ax.plot(xd,yd, 'b-.', alpha=.8, label=label4)
 
 # Create fit function for exponential data
 # f = lambda p, x: p[0]+ p[1]*exp(-x/p[2])
