@@ -26,7 +26,7 @@ while read line; do
     sudo sysctl -p $client_sysctl
     ssh $remote_user@$host "sudo sysctl -p $server_sysctl" <&-
 
-    ssh $remote_user@$host "$export_ld; $server_command $port $server_args & pid=\$!;sleep $interval;kill \$pid" <&- &
+    # ssh $remote_user@$host "$export_ld; $server_command $port $server_args & pid=\$!;sleep $interval;kill \$pid" <&- &
 
     $client $host $port $client_args > raw_out_test$count &
     client_pid=$!

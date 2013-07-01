@@ -90,14 +90,10 @@ int main(int argc, char* argv[]) {
   for (int i = 0; i < argc; i++) {
     
     if (!strcmp(argv[i], "rsync")) {
-
-      fprintf(stderr, "============= RSYNC \n");
       protocol = RSYNC;
       protocol_arg_idx = i;
       break;
     } else if (!strcmp(argv[i], "scp")) {
-
-      fprintf(stderr, "============= SCP \n");
       protocol = SCP;
       protocol_arg_idx = i;
       break;
@@ -367,31 +363,27 @@ int main(int argc, char* argv[]) {
       // protocol_argv[protocol_idx++] = "--blocking-io";
 
       //scp_argv[scp_idx++] = curr_options.scp_timeout;
-      
-      // string path = "";
-      // char link[512], tmp[512];
-      // int i;
-      // sprintf(link, "/proc/%d/exe", getpid());
-      // // get the running command to find the execution directory
-      // if (readlink(link, tmp, 512)!=-1) {
-      //   path = tmp;
-      //   i = path.find_last_of("/");
-      //   path = path.substr(0,i);
-      // } else {
-      // 	fprintf("Unable to readlink: %s", link);
-      // }
-      // char* arg_path  = (char*)malloc(strlen((path.c_str()+10)*sizeof(char)));
-      // sprintf(arg_path, "%s/recv_args", path.c_str());
-      
-      char* arg_path = "/tmp/arg_args";
-      char* chmod = (char*)malloc(sizeof(char)*(strlen(arg_path)+10));
-      sprintf(chmod, "chmod +x %s", arg_path);
 
-      if (!system(chmod)){
-	fprintf(stderr, "Unable to give udr wrapper exec permissions: %s", arg_path);
-	exit(1);
+      // Get the path where the executable is located so we can wrap the udr call
+      string path = "";
+      char link[512], tmp[512];
+      int i;
+      sprintf(link, "/proc/%d/exe", getpid());
+      if (readlink(link, tmp, 512)!=-1) {
+        path = tmp;
+        i = path.find_last_of("/");
+        path = path.substr(0,i);
+      } else {
+      	fprintf(stderr, "Unable to readlink: %s", link);
       }
-      
+
+      // Create the argument file path
+      char* arg_path  = (char*)malloc(sizeof(char)*(strlen(path.c_str())+10));
+      sprintf(arg_path, "%s/recv_arg", path.c_str());
+
+      // Open the argument file
+      FILE *args = fopen(arg_path, "w");
+
       protocol_argv[protocol_idx++] = "-S";
       protocol_argv[protocol_idx++] = arg_path;
       // protocol_argv[protocol_idx++] = strdup(curr_options.udr_program_src);
@@ -403,8 +395,8 @@ int main(int argc, char* argv[]) {
       else
 	udr_scp_args1[0] = '\0';
 
-      // if (curr_options.verbose)
-	// strcat(udr_scp_args1, "-v ");
+      if (curr_options.verbose)
+	strcat(udr_scp_args1, "-v ");
 
       strcat(udr_scp_args1, "-s");
 
@@ -417,17 +409,7 @@ int main(int argc, char* argv[]) {
       						   strlen(curr_options.key_filename) + 6);
       
 
-
-      // sprintf(protocol_argv[protocol_idx], "%s %s", 
-      // 	      curr_options.udr_program_src, 
-      // 	      udr_scp_args1);
-      // 	      curr_options.port_num, 
-      // 	      udr_scp_args2,
-      // 	      curr_options.key_filename);
-
-      FILE *args = fopen(arg_path, "w");
        if (args){
-	 // /home/jmiller/UDR/src/udr -s 9008 -p .udr_key
 	 fprintf(args, "%s -s %s -p %s %s scp", 
 		 curr_options.udr_program_src,
 		 curr_options.port_num, 
