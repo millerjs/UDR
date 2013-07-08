@@ -40,12 +40,12 @@ pid_t fork_execvp(const char *program, char* argv[], int * ptc, int * ctp){
     int parent_to_child[2], child_to_parent[2];
 
     // for debugging...
-    // char* arg;
-    // int idx = 0;
-    // while((arg = argv[idx]) != NULL){
-    //   fprintf(stderr, "DEBUG ARGS:%s arg[%d]: %s\n", program, idx, arg);
-    //   idx++;
-    // }
+    char* arg;
+    int idx = 0;
+    while((arg = argv[idx]) != NULL){
+      fprintf(stderr, "DEBUG ARGS:%s arg[%d]: %s\n", program, idx, arg);
+      idx++;
+    }
 
     if(pipe(parent_to_child) != 0 || pipe(child_to_parent) != 0){
     	perror("Pipe cannot be created");

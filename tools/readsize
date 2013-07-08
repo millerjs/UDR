@@ -1,8 +1,8 @@
 #!/bin/bash
 
 echo $1
-checkpoint=$1
-file="/home/jmiller/10GBfile"
+checkpoint=$2
+file=$1
 echo "" > $checkpoint
 while true
 do

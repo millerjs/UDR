@@ -116,7 +116,7 @@ int main(int argc, char* argv[]) {
 
   // if (!use_rsync)
   //   usage();
-  fprintf(stderr, "protocol %d %d \n", curr_options.protocol, RSYNC);
+
   if (curr_options.tflag) {
     return run_receiver(&curr_options);
   }//now for server mode
@@ -410,11 +410,13 @@ int main(int argc, char* argv[]) {
       
 
        if (args){
-	 fprintf(args, "%s -s %s -p %s %s scp", 
+	 fprintf(args, "%s -s %s -p %s %s scp %s", 
 		 curr_options.udr_program_src,
 		 curr_options.port_num, 
 		 curr_options.key_filename, 
-		 curr_options.host);
+		 curr_options.host,
+		 "");
+
        } else {
 	 fprintf(stderr, "Unable to print to argument file: %s\n", arg_path);
 	 exit(1);

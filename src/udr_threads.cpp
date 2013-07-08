@@ -106,14 +106,15 @@ void *handle_to_udt(void *threadarg) {
       fprintf(logfile, "%d: Should be reading from process...\n", my_args->id);
       fflush(logfile);
     }
-
-    //using select because only checking stdin and is more portable
+    
+    // using select because only checking stdin and is more portable
     if(my_args->crypt != NULL)
       bytes_read = read(my_args->fd, indata, max_block_size);
     else
       bytes_read = read(my_args->fd, outdata, max_block_size);
-
+    
     if(bytes_read < 0){
+
       if(my_args->log){
 	fprintf(logfile, "Error: bytes_read %d %s\n", bytes_read, strerror(errno));
 	fclose(logfile);
@@ -122,6 +123,8 @@ void *handle_to_udt(void *threadarg) {
       return NULL;
     }
     if(bytes_read == 0) {
+
+
       if(my_args->log){
 	fprintf(logfile, "%d Got %d bytes_read, exiting\n", my_args->id, bytes_read);
 	fclose(logfile);
@@ -150,7 +153,7 @@ void *handle_to_udt(void *threadarg) {
 	my_args->is_complete = true;
 	return NULL;
       }
-
+      
       ssize += ss;
       if(my_args->log) {
 	fprintf(logfile, "%d sender on socket %d bytes read: %d ssize: %d\n", my_args->id, *my_args->udt_socket, bytes_read, ssize);
@@ -215,8 +218,8 @@ void *udt_to_handle(void *threadarg) {
     }
   }
   my_args->is_complete = true;
-}
 
+}
 
 int run_sender(UDR_Options * udr_options, unsigned char * passphrase, const char* cmd, int argc, char ** argv) {
 
@@ -331,7 +334,6 @@ int run_sender(UDR_Options * udr_options, unsigned char * passphrase, const char
   return 0;
 }
 
-
 int run_receiver(UDR_Options * udr_options) {
   string filename = local_logfile_dir + "receiver_log.txt";
   //FILE * logfile = fopen(filename.c_str(), "w");
@@ -398,8 +400,6 @@ int run_receiver(UDR_Options * udr_options) {
     cerr << "[udr receiver] listen: " << UDT::getlasterror().getErrorMessage() << endl;
     return 0;
   }
-  
-
 
   sockaddr_storage clientaddr;
   int addrlen = sizeof(clientaddr);
@@ -518,7 +518,7 @@ int run_receiver(UDR_Options * udr_options) {
   }
 
   pthread_t recv_to_udt_thread;
-  pthread_create(&recv_to_udt_thread, NULL, handle_to_udt, (void *)&recv_to_udt);
+  pthread_create(&recv_to_udt_thread, NULL, handle_to_udt, (void*)&recv_to_udt);
 
   pthread_t udt_to_recv_thread;
   pthread_create(&udt_to_recv_thread, NULL, udt_to_handle, (void*)&udt_to_recv);
@@ -537,6 +537,7 @@ int run_receiver(UDR_Options * udr_options) {
       pthread_kill(udt_to_recv_thread, SIGUSR1);
       break;
     }
+
     if(recv_to_udt.is_complete && udt_to_recv.is_complete){
       if(udr_options->verbose){
 	fprintf(stderr, "[udr receiver] both threads are complete: recv_to_udt.is_complete %d udt_to_recv.is_complete %d\n", recv_to_udt.is_complete, udt_to_recv.is_complete);
