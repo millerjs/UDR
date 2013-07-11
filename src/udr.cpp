@@ -57,10 +57,10 @@ char * get_udr_cmd(UDR_Options * udr_options) {
   }  else {
     if (udr_options->protocol == SCP)
       sprintf(udr_args, "%s -a %d -b %d %s", udr_args, udr_options->start_port, udr_options->end_port, "-t scp");
-    else
+    else if  (udr_options->protocol == RSYNC)
       sprintf(udr_args, "%s -a %d -b %d %s", udr_args, udr_options->start_port, udr_options->end_port, "-t rsync");
   }
-
+  
   char* udr_cmd = (char *) malloc(strlen(udr_options->udr_program_dest) + strlen(udr_args) + 3);
   sprintf(udr_cmd, "%s %s\n", udr_options->udr_program_dest, udr_args);
 
@@ -73,12 +73,6 @@ void print_version() {
 
 //only going to go from local -> remote and remote -> local, remote <-> remote maybe later, but local -> local doesn't make sense for UDR
 int main(int argc, char* argv[]) {
-
-  char** temp = argv;
-  for (int i = 0; i < argc; i ++){
-    fprintf(stderr, "%s ", temp[i]);
-
-  }
 
   int protocol = NONE;
   int protocol_arg_idx = -1;
@@ -408,6 +402,12 @@ int main(int argc, char* argv[]) {
       						   strlen(udr_scp_args2) + 
       						   strlen(curr_options.key_filename) + 6);
       
+      sprintf(protocol_argv[protocol_idx], "%s -s %s -p %s %s scp %s", 
+		 curr_options.udr_program_src,
+		 curr_options.port_num, 
+		 curr_options.key_filename, 
+		 curr_options.host,
+		 "");
 
        if (args){
 	 fprintf(args, "%s -s %s -p %s %s scp %s", 

@@ -62,7 +62,7 @@ string udt_recv_string( int udt_handle ) {
   string str = "";
 
   for( ;; ) {
-    int bytes_read = UDT::recv( udt_handle , buf , 1 , 0 );
+    int bytes_read = UDT::recv(udt_handle, buf, 1, 0);
     if ( bytes_read == UDT::ERROR ){
       cerr << "recv:" << UDT::getlasterror().getErrorMessage() << endl;
       break;
@@ -124,7 +124,6 @@ void *handle_to_udt(void *threadarg) {
     }
     if(bytes_read == 0) {
 
-
       if(my_args->log){
 	fprintf(logfile, "%d Got %d bytes_read, exiting\n", my_args->id, bytes_read);
 	fclose(logfile);
@@ -138,7 +137,7 @@ void *handle_to_udt(void *threadarg) {
 
     if(my_args->log){
       fprintf(logfile, "%d bytes_read: %d\n", my_args->id, bytes_read);
-      // print_bytes(logfile, outdata, bytes_read);
+      print_bytes(logfile, outdata, bytes_read);
       fflush(logfile);
     }
 
@@ -165,7 +164,6 @@ void *handle_to_udt(void *threadarg) {
 }
 
 void *udt_to_handle(void *threadarg) {
-
 
   struct thread_data *my_args = (struct thread_data *) threadarg;
   char indata[max_block_size];
@@ -247,7 +245,6 @@ int run_sender(UDR_Options * udr_options, unsigned char * passphrase, const char
     return 1;
   }
 
-
   if (UDT::ERROR == UDT::connect(client, peer->ai_addr, peer->ai_addrlen)) {
     cerr << "[udr sender] connect: " << UDT::getlasterror().getErrorMessage() << endl;
     return 1;
@@ -314,7 +311,11 @@ int run_sender(UDR_Options * udr_options, unsigned char * passphrase, const char
   pthread_t udt_to_sender_thread;
   pthread_create(&udt_to_sender_thread, NULL, udt_to_handle, (void*)&udt_to_sender);
 
-  int rc1 = pthread_join(udt_to_sender_thread, NULL);
+  int rc1;
+  if (udr_options->protocol == RSYNC)
+    rc1 = pthread_join(udt_to_sender_thread, NULL);
+  else if (udr_options->protocol == SCP)
+    rc1 = pthread_join(sender_to_udt_thread, NULL);
 
   if(udr_options->verbose)
     fprintf(stderr, "[udr sender] joined on udt_to_sender_thread %d\n", rc1);
@@ -450,11 +451,8 @@ int run_receiver(UDR_Options * udr_options) {
   }
   else{
 
-    fprintf(stderr, "protocol %d \n", udr_options->protocol);
-    
-    //if (!strcmp(cmd, "scp "))
     if (udr_options->protocol == SCP)
-    cmd = strdup("scp -t -- ./");
+      cmd = strdup("scp -r -t -- ./");
 
     rsync_cmd = (char *)malloc(strlen(cmd) + 1);
 
@@ -564,6 +562,7 @@ int run_receiver(UDR_Options * udr_options) {
     fprintf(stderr, "[udr receiver] Trying to close recver\n");
   }
   UDT::close(recver);
+
   //int rc1 = pthread_join(recv_to_udt_thread, NULL);
   //if(udr_options->verbose){
   //fprintf(stderr, "[udr receiver] Joined recv_to_udt_thread %d\n", rc1);
@@ -572,7 +571,6 @@ int run_receiver(UDR_Options * udr_options) {
   if(udr_options->verbose){
     fprintf(stderr, "[udr receiver] Closed recver\n");
   }
-
 
   UDT::close(serv);
 
@@ -594,4 +592,6 @@ int run_receiver(UDR_Options * udr_options) {
 
 
   return 0;
+
+
 }

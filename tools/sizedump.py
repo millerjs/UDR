@@ -3,125 +3,43 @@ from numpy import *
 from scipy import *
 from scipy import optimize
 from subprocess import call
+import sys
 
-
-# ------------------------------------------------------------------------
-#                              Definitions
-# ------------------------------------------------------------------------
-
-
-
-bbox_props = dict(boxstyle="round4,pad=0.8", fc="cyan", ec="k", lw=2)
-
-def scient(value):
-    power = int(round(log10(abs(value))))
-    if abs(power) >1:
-        m = value/(10**(power-1))
-        printer = "%.2f" % m
-        printer = printer + "\\times10^{%d}" % (power-1)
-    else:
-        m = value
-        printer = "%.2f" % m
-    return str(printer)
-
-def out(path, value):
-    f = open(path, 'w')
-    f.write(scient(value))
-
-def stddev(f,p,x,y):
-    Sum = sum( (f(p,x) - y)**2 )
-    return sqrt(Sum/len(x))
-
-def chisqr(f,p,x,y,df):
-    e = stddev(f,p,x,y)
-    return sum((y - f(p,x))**2/e**2)/(len(x) - df)
-    
-# ------------------------------------------------------------------------
-#                             Curve fitting
-# ------------------------------------------------------------------------
-def fit(f,p,x,y):
-    fitfunc = f
-    errfunc = lambda p, x, y: fitfunc(p, x) - y
-    p1, success = optimize.leastsq(errfunc, p, args=(x,y))
-    return p1
-    
-# ------------------------------------------------------------------------
-#                                 Plot
-# ------------------------------------------------------------------------
+def add_plot(path):
 
 # Load data
-path = "./scp"
-ya = loadtxt(path,unpack=True, usecols=[0], skiprows=1)
-ya = ya*7.62939453e-6
-xa = array(range(len(ya)))
+    y = loadtxt(path,unpack=True, usecols=[0], skiprows=1)
+    y = y*7.62939453e-6
+    y2 = [y[i]-y[i-1] for i in range(1, len(y))]
+    x = range(len(y2))
 
-path2 = "./rsync"
-yb = loadtxt(path2,unpack=True, usecols=[0], skiprows=1)
-yb = yb*7.62939453e-6
-xb = array(range(len(yb)))
-
-path3 = "./scpNORM"
-yc = loadtxt(path3,unpack=True, usecols=[0], skiprows=1)
-yc = yc*7.62939453e-6
-xc = array(range(len(yc)))
-
-path4 = "./rsyncNORM"
-yd = loadtxt(path4,unpack=True, usecols=[0], skiprows=1)
-yd = yd*7.62939453e-6
-xd = array(range(len(yd)))
+# Label PLot
+    title = "File Transfer Rate:"
+    xxis  = "Time (s)"
+    yxis  = "Transfered file size (Gb)"
+    ax.set_title(title)
+    ax.set_xlabel(xxis)
+    ax.set_ylabel(yxis)
+    
+    ax.plot(x,y2, alpha=.8, label=path)
+    
+# Create Legend
+    ax.legend(loc='upper center', bbox_to_anchor=(0.85, .35),
+              ncol=1, fancybox=True, shadow=True)    
+    ax.yaxis.grid(color='gray', linestyle='dashed')
+    ax.xaxis.grid(color='gray', linestyle='dashed')
 
 # Create plot
 plt = matplotlib.pyplot.figure()
 ax = axes()
-
-# Resize plot
-# xlim(min(x), max(x))
-# ylim(min(y), max(y)*1.1)
-
-# Label PLot
-title = "File Transfer Rate: SCP"
-xaxis = "Time (s)"
-yaxis = "Transfered file size (Gb)"
-ax.set_title(title)
-ax.set_xlabel(xaxis)
-ax.set_ylabel(yaxis)
-
-label1="SCP UDR Transfer rate"
-label2="UDR Transfer rate"
-label3="scp normal rate"
-label4="rsync normal rate"
-
-
-# Plot errobars
-# ax.errorbar(x,y,xerr=xe,yerr=ye, fmt='c', alpha=.3, label=label1)
-# ax.plot(x,y, 'k-.', alpha=.3, label=label1)
-ax.plot(xa,ya, 'g', alpha=.8, label=label1)
-ax.plot(xb,yb, 'b', alpha=.8, label=label2)
-ax.plot(xc,yc, 'g-.', alpha=.8, label=label3)
-ax.plot(xd,yd, 'b-.', alpha=.8, label=label4)
-
-# Create fit function for exponential data
-# f = lambda p, x: p[0]+ p[1]*exp(-x/p[2])
-# p = fit(f, [.1, 250, 1], x, y)
-
-# Annotate curve
-# chsqr = chisqr(f,p,x,y,3)
-# dtau = stddev(f,p,x,y)
-# ax.annotate(''
-#             , size = 15
-#             , xy=(7,f(p,7)), xytext=(10,100),
-#             bbox=bbox_props,
-#             arrowprops=dict(arrowstyle="->",
-#                             connectionstyle="arc3,rad=.1"))
-
-# Create Legend
-ax.legend(loc='upper center', bbox_to_anchor=(0.85, .35),
-          ncol=1, fancybox=True, shadow=True)    
-ax.yaxis.grid(color='gray', linestyle='dashed')
-ax.xaxis.grid(color='gray', linestyle='dashed')
-
+    
 # Save  plot
 plt.set_facecolor('white')
+
+for f in sys.argv[1:]:
+    print "Adding %s" % f
+    add_plot(f)
+
 plt.savefig('rates.png', bbox_inches=0)
 # show()
  
