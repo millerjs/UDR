@@ -373,7 +373,7 @@ int main(int argc, char* argv[]) {
 
       // Create the argument file path
       char* arg_path  = (char*)malloc(sizeof(char)*(strlen(path.c_str())+10));
-      sprintf(arg_path, "%s/recv_arg", path.c_str());
+      sprintf(arg_path, "%s/args", path.c_str());
 
       // Open the argument file
       FILE *args = fopen(arg_path, "w");
@@ -395,34 +395,31 @@ int main(int argc, char* argv[]) {
       strcat(udr_scp_args1, "-s");
 
       const char * udr_scp_args2 = "-p";
-        
+      
       protocol_argv[protocol_idx] = (char*) malloc(strlen(curr_options.udr_program_src) + 
       						   strlen(udr_scp_args1) + 
       						   strlen(curr_options.port_num) + 
       						   strlen(udr_scp_args2) + 
-      						   strlen(curr_options.key_filename) + 6);
+      						   strlen(curr_options.key_filename) + 26);
       
       sprintf(protocol_argv[protocol_idx], "%s -s %s -p %s %s scp %s", 
 		 curr_options.udr_program_src,
 		 curr_options.port_num, 
 		 curr_options.key_filename, 
-		 curr_options.host,
-		 "");
+		 curr_options.host, "");
 
        if (args){
 	 fprintf(args, "%s -s %s -p %s %s scp %s", 
 		 curr_options.udr_program_src,
 		 curr_options.port_num, 
 		 curr_options.key_filename, 
-		 curr_options.host,
-		 "");
+		 curr_options.host, "");
 
        } else {
 	 fprintf(stderr, "Unable to print to argument file: %s\n", arg_path);
 	 exit(1);
        }
        fclose(args);
-	
       
       // sprintf(protocol_argv[protocol_idx], "%s %s %s %s", 
       // 	      // curr_options.udr_program_src, 

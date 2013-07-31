@@ -32,7 +32,7 @@ and limitations under the License.
 #include <openssl/err.h>
 #include <limits.h>
 #include <iostream>
-//#include "udr_log.h"
+#include <unistd.h>
 
 using namespace std;
 
@@ -121,6 +121,7 @@ class crypto
 //        EVP_CIPHER_CTX_cleanup(&ctx);
 //    }
 
+
     // Returns how much has been encrypted and will call encrypt final when
     // given len of 0
     int encrypt(char *in, char *out, int len)
@@ -143,5 +144,29 @@ class crypto
         return evp_outlen;
     }
 };
+
+/* Threaded instances */
+
+#define MUTEX_TYPE		pthread_mutex_t
+#define MUTEX_SETUP(x)		pthread_mutex_init(&(x), NULL)
+#define MUTEX_CLEANUP(x)	pthread_mutex_destroy(&x) 
+#define MUTEX_LOCK(x)		pthread_mutex_lock(&x)
+#define MUTEX_UNLOCK(x)		pthread_mutex_unlock(&x)
+#define THREAD_ID		pthread_self()
+
+static MUTEX_TYPE *mutex_buf = NULL;
+
+static void locking_function(int mode, int n, const char*file, int line){
+  if (mode & CRYPTO_LOCK)
+    MUTEX_LOCK(mutex_buf[n]);
+  else
+    MUTEX_UNLOCK(mutex_buf[n]);
+}
+
+static unsigned long id_function(void){
+  return ((unsigned long) THREAD_ID);
+}
+
+
 
 #endif

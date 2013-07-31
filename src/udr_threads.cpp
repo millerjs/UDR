@@ -34,7 +34,40 @@ using std::string;
 int ppid_poll = 5;
 bool thread_log = false;
 
-//for debugging
+int THREAD_setup(void){
+
+  mutex_buf = (MUTEX_TYPE*)malloc(CRYPTO_num_locks()*sizeof(MUTEX_TYPE));
+  
+  if (!mutex_buf)
+    return 0;
+
+  for (int i = 0; i < CRYPTO_num_locks(); i++)
+    MUTEX_SETUP(mutex_buf[i]);
+
+  CRYPTO_set_id_callback(id_function);
+  CRYPTO_set_locking_callback(locking_function);
+  
+  return 1;
+}
+
+int THREAD_cleanup(void){
+
+  if (!mutex_buf)
+    return 0;
+
+  CRYPTO_set_id_callback(NULL);
+  CRYPTO_set_locking_callback(NULL);
+
+  for (int i = 0; i < CRYPTO_num_locks(); i ++)
+    MUTEX_CLEANUP(mutex_buf[i]);
+
+  free(mutex_buf);
+  mutex_buf = NULL;
+  return 1;
+
+}
+
+
 string local_logfile_dir = "../log";
 
 void print_bytes(FILE* file, const void *object, size_t size) {
@@ -79,9 +112,10 @@ string udt_recv_string( int udt_handle ) {
   return str;
 }
 
+// Exit successfully
 void sigexit(int signum) {
   exit(EXIT_SUCCESS);
-}    /* Exit successfully */
+}
 
 void *handle_to_udt(void *threadarg) {
   signal(SIGUSR1,sigexit);
@@ -90,6 +124,9 @@ void *handle_to_udt(void *threadarg) {
   char indata[max_block_size];
   char outdata[max_block_size];
   FILE*  logfile;
+
+  // Initialize threading
+  THREAD_setup();
 
   if(my_args->log) {
     string filename = my_args->logfile_dir + convert_int(my_args->id) + "_log.txt";
@@ -132,8 +169,13 @@ void *handle_to_udt(void *threadarg) {
       return NULL;
     }
 
-    if(my_args->crypt != NULL)
+    
+    // TODO: Thread here
+    if(my_args->crypt != NULL){
       my_args->crypt->encrypt(indata, outdata, bytes_read);
+      
+    }
+
 
     if(my_args->log){
       fprintf(logfile, "%d bytes_read: %d\n", my_args->id, bytes_read);
@@ -194,6 +236,7 @@ void *udt_to_handle(void *threadarg) {
 
     int written_bytes;
     if(my_args->crypt != NULL) {
+      // TODO: Thread this
       my_args->crypt->encrypt(indata, outdata, rs);
       written_bytes = write(my_args->fd, outdata, rs);
     }
@@ -339,6 +382,7 @@ int run_receiver(UDR_Options * udr_options) {
   string filename = local_logfile_dir + "receiver_log.txt";
   //FILE * logfile = fopen(filename.c_str(), "w");
 
+
   int orig_ppid = getppid();
 
   UDT::startup();
@@ -402,6 +446,7 @@ int run_receiver(UDR_Options * udr_options) {
     return 0;
   }
 
+
   sockaddr_storage clientaddr;
   int addrlen = sizeof(clientaddr);
 
@@ -411,6 +456,8 @@ int run_receiver(UDR_Options * udr_options) {
     fprintf(stderr, "[udr receiver] accept: %s\n", UDT::getlasterror().getErrorMessage());
     return 0;
   }
+
+    
 
   char clienthost[NI_MAXHOST];
   char clientservice[NI_MAXSERV];
@@ -457,6 +504,7 @@ int run_receiver(UDR_Options * udr_options) {
     rsync_cmd = (char *)malloc(strlen(cmd) + 1);
 
     strcpy(rsync_cmd, cmd);
+
   }
 
   if(udr_options->verbose){
