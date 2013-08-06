@@ -28,6 +28,9 @@ and limitations under the License.
 #include <udt.h>
 #include "udr_util.h"
 #include "udr_threads.h"
+#include "crypto.h"
+
+#define THREADED 1
 
 using std::string;
 
@@ -92,9 +95,6 @@ void *handle_to_udt(void *threadarg) {
   char outdata[max_block_size];
   FILE*  logfile;
 
-  // Initialize threading
-  THREAD_setup();
-
   if(my_args->log) {
     string filename = my_args->logfile_dir + convert_int(my_args->id) + "_log.txt";
     logfile = fopen(filename.c_str(), "w");
@@ -139,8 +139,11 @@ void *handle_to_udt(void *threadarg) {
     
     // TODO: Thread here
     if(my_args->crypt != NULL){
-      my_args->crypt->encrypt(indata, outdata, bytes_read);
-      
+      if (THREADED)
+	encrypt(indata, outdata, bytes_read, my_args->crypt);
+      else 
+	my_args->crypt->encrypt(indata, outdata, bytes_read);
+
     }
 
 
@@ -204,7 +207,11 @@ void *udt_to_handle(void *threadarg) {
     int written_bytes;
     if(my_args->crypt != NULL) {
       // TODO: Thread this
-      my_args->crypt->encrypt(indata, outdata, rs);
+      if (THREADED)
+	encrypt(indata, outdata, rs, my_args->crypt);
+      else 
+	my_args->crypt->encrypt(indata, outdata, rs);
+
       written_bytes = write(my_args->fd, outdata, rs);
     }
     else {

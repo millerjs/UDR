@@ -18,16 +18,22 @@ and limitations under the License.
 
 #include "crypto.h"
 #include <stdlib.h>
-#define N_THREADS 1
-#define DEBUG 1
 
+#define N_THREADS 2
+#define DEBUG 0
 
 void pris(char* s){
   if (DEBUG)
     fprintf(stderr, "[crypto debug: %u] %s\n", THREAD_ID, s);
 }
+void prii(int i){
+  if (DEBUG)
+    fprintf(stderr, "             -> %d\n", i);
+}
 
-const int max_block_size = 64*1024; //what should this be? maybe based on UDT buffer size?
+
+const int max_block_size = 64*1024;
+
 
 // Function for OpenSSL to lock mutex
 static void locking_function(int mode, int n, const char*file, int line){
@@ -86,16 +92,13 @@ int THREAD_cleanup(void){
 void *encrypt_threaded(void* _args){
 
   pris("Encrypting buffer with threading"); 
+
   // Grab arguments from void*
   e_thread_args* args = (e_thread_args*)_args;
 
-  if (!args->len){
-    return 0;
-  }
-
   int *evp_outlen = (int*)malloc(sizeof(int));
   *evp_outlen = args->c->encrypt(args->in, args->out, args->len);
-  pthread_exit((void*) evp_outlen);
+  pthread_exit(NULL);
   
 }
 
@@ -104,9 +107,6 @@ int encrypt(char*in, char*out, int len, crypto* c){
   THREAD_setup();
 
   pris("Recieved string to encrypt");
-
-  fprintf(stderr, "in: %d\n", in);
-
   pris("Initializing encryption threads");
 
  // Create threads
@@ -119,55 +119,62 @@ int encrypt(char*in, char*out, int len, crypto* c){
 
   // Create thread args
   e_thread_args args[N_THREADS];
+  
+  // Assign portions of in/out to each thread arg
+  size_t buf_len = (size_t) (((double)len)/N_THREADS + .5);
+
+  pris("Total length"); prii(len);
+  pris("buf_len"); 
+
   int cursor = 0;
-  int offset = (int)(((float)len)/N_THREADS+.5);
+
   for (int i = 0; i < N_THREADS; i++){
-    args[i].out = (char*) malloc(max_block_size*sizeof(char));
     args[i].in = in+cursor;
-    cursor += offset;
-    if ((cursor+offset) > len)
-      offset = len-cursor;
-    args[i].len = offset;
+    args[i].out = out+cursor;
+    args[i].len = cursor+buf_len < len ? buf_len : len-cursor;
+    prii(args[i].len);
     args[i].c = c;
-    fprintf(stderr, "Thread %d, len: %d\n", i, offset);
+
+    cursor += buf_len;
   }
 
   pris("Encryption threads initialized");
   pris("Spawning encryption threads");
 
+  void* status;
+
   // Spawn and run encryption threads
   for(int i = 0; i < N_THREADS; i++) {
-    // int stat =  pthread_create(&thread[i], &attr, encrypt_threaded, &(args[i])); 
-    // if (stat) {
-    //   printf("ERROR; return code from pthread_create() is %d\n", stat);
-    //   exit(1);
-    // }
+    int stat =  pthread_create(&thread[i], &attr, encrypt_threaded, &(args[i])); 
+    if (stat) {
+      printf("ERROR; return code from pthread_create() is %d\n", stat);
+      exit(1);
+    }
+
+    // pthread_join(thread[i], &status);
 
   }
-  c->encrypt(in, out, len);  
-  // pris("Waiting to join encryption threads");
-  // /* Free attribute and wait for the other threads */
-  // void* status;
-  // pthread_attr_destroy(&attr);
-  // int tot = 0;
-  // for(int i = 0; i < N_THREADS; i++) {
-  //   int stat = pthread_join(thread[i], &status);
-  //   if (stat) {
-  //     fprintf(stderr, "ERROR; return code from pthread_join() is %d\n", *(int*)&stat);
-  //     exit(1);
-  //   }
-  //   strncat(out+tot, args[i].out, stat);
-  //   tot += *(int*)status;
 
-  // }
+  pris("Waiting to join encryption threads");
 
-  // fprintf(stderr, "out: %d\n", out);
+  /* Free attribute and wait for the other threads */
+  pthread_attr_destroy(&attr);
+  int tot = 0;
 
-  // pris("Encryption threads joined");
-  pthread_exit(NULL);
+  for(int i = 0; i < N_THREADS; i++) {
+
+    int stat = pthread_join(thread[i], &status);
+    if (stat) {
+      fprintf(stderr, "ERROR: return code from pthread_join() is %d\n", *(int*)&stat);
+      exit(1);
+    }
+
+  }
+
+  pris("Encryption threads joined");
 
   THREAD_cleanup();
   
-  // return tot;
+  return 0;
 
 }

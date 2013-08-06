@@ -151,10 +151,10 @@ class crypto
         }
 	
         if(!EVP_CipherUpdate(&ctx, (unsigned char *)out, &evp_outlen, (unsigned char *)in, len))
-        {
+	  {
             fprintf(stderr, "encryption error\n");
             exit(EXIT_FAILURE);
-        }
+	  }
         return evp_outlen;
     }
 
@@ -171,7 +171,6 @@ typedef struct e_thread_args{
 } e_thread_args;
 
 int encrypt(char*in, char*out, int len, crypto* c);
-
 
 #endif
 /* Threaded instances */
