@@ -34,6 +34,20 @@ and limitations under the License.
 #include <iostream>
 #include <unistd.h>
 
+#define MUTEX_TYPE		pthread_mutex_t
+#define MUTEX_SETUP(x)		pthread_mutex_init(&(x), NULL)
+#define MUTEX_CLEANUP(x)	pthread_mutex_destroy(&x) 
+#define MUTEX_LOCK(x)		pthread_mutex_lock(&x)
+#define MUTEX_UNLOCK(x)		pthread_mutex_unlock(&x)
+#define THREAD_ID		pthread_self()
+
+static MUTEX_TYPE *mutex_buf = NULL;
+static void locking_function(int mode, int n, const char*file, int line);
+static unsigned long id_function(void);
+int THREAD_setup(void);
+int THREAD_cleanup(void);
+void *enrypt_threaded(void* _args);
+
 using namespace std;
 
 class crypto
@@ -127,7 +141,7 @@ class crypto
     int encrypt(char *in, char *out, int len)
     {
         int evp_outlen;
-
+	
         if (len == 0) {
             if (!EVP_CipherFinal_ex(&ctx, (unsigned char *)out, &evp_outlen)) {
                 fprintf(stderr, "encryption error\n");
@@ -135,7 +149,7 @@ class crypto
             }
             return evp_outlen;
         }
-
+	
         if(!EVP_CipherUpdate(&ctx, (unsigned char *)out, &evp_outlen, (unsigned char *)in, len))
         {
             fprintf(stderr, "encryption error\n");
@@ -143,30 +157,22 @@ class crypto
         }
         return evp_outlen;
     }
+
+    
 };
 
-/* Threaded instances */
+typedef struct e_thread_args{
+  char *in;
+  char *out;
+  int len;
+  int n_threads;
+  crypto* c;
 
-#define MUTEX_TYPE		pthread_mutex_t
-#define MUTEX_SETUP(x)		pthread_mutex_init(&(x), NULL)
-#define MUTEX_CLEANUP(x)	pthread_mutex_destroy(&x) 
-#define MUTEX_LOCK(x)		pthread_mutex_lock(&x)
-#define MUTEX_UNLOCK(x)		pthread_mutex_unlock(&x)
-#define THREAD_ID		pthread_self()
+} e_thread_args;
 
-static MUTEX_TYPE *mutex_buf = NULL;
-
-static void locking_function(int mode, int n, const char*file, int line){
-  if (mode & CRYPTO_LOCK)
-    MUTEX_LOCK(mutex_buf[n]);
-  else
-    MUTEX_UNLOCK(mutex_buf[n]);
-}
-
-static unsigned long id_function(void){
-  return ((unsigned long) THREAD_ID);
-}
-
+int encrypt(char*in, char*out, int len, crypto* c);
 
 
 #endif
+/* Threaded instances */
+
