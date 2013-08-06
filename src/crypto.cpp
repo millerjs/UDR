@@ -19,13 +19,14 @@ and limitations under the License.
 #include "crypto.h"
 #include <stdlib.h>
 
-#define N_THREADS 2
-#define DEBUG 0
+#define N_THREADS 3
+#define DEBUG 1
 
 void pris(char* s){
   if (DEBUG)
     fprintf(stderr, "[crypto debug: %u] %s\n", THREAD_ID, s);
 }
+
 void prii(int i){
   if (DEBUG)
     fprintf(stderr, "             -> %d\n", i);
@@ -121,7 +122,7 @@ int encrypt(char*in, char*out, int len, crypto* c){
   e_thread_args args[N_THREADS];
   
   // Assign portions of in/out to each thread arg
-  size_t buf_len = (size_t) (((double)len)/N_THREADS + .5);
+  size_t buf_len = (size_t) (((double)len)/N_THREADS + 1);
 
   pris("Total length"); prii(len);
   pris("buf_len"); 
@@ -132,7 +133,11 @@ int encrypt(char*in, char*out, int len, crypto* c){
     args[i].in = in+cursor;
     args[i].out = out+cursor;
     args[i].len = cursor+buf_len < len ? buf_len : len-cursor;
-    prii(args[i].len);
+
+    // Ignore unused threads
+    if (args[i].len > 0)
+      prii(args[i].len);
+
     args[i].c = c;
 
     cursor += buf_len;
@@ -145,13 +150,16 @@ int encrypt(char*in, char*out, int len, crypto* c){
 
   // Spawn and run encryption threads
   for(int i = 0; i < N_THREADS; i++) {
-    int stat =  pthread_create(&thread[i], &attr, encrypt_threaded, &(args[i])); 
-    if (stat) {
-      printf("ERROR; return code from pthread_create() is %d\n", stat);
-      exit(1);
-    }
 
-    // pthread_join(thread[i], &status);
+    // Ignore unused threads but spawn the others
+    if (args[i].len > 0){
+      int stat =  pthread_create(&thread[i], &attr, encrypt_threaded, &(args[i])); 
+      if (stat) {
+	printf("ERROR; return code from pthread_create() is %d\n", stat);
+	exit(1);
+      }
+
+    }
 
   }
 
@@ -163,10 +171,12 @@ int encrypt(char*in, char*out, int len, crypto* c){
 
   for(int i = 0; i < N_THREADS; i++) {
 
-    int stat = pthread_join(thread[i], &status);
-    if (stat) {
-      fprintf(stderr, "ERROR: return code from pthread_join() is %d\n", *(int*)&stat);
-      exit(1);
+    if (args[i].len > 0){
+      int stat = pthread_join(thread[i], &status);
+      if (stat) {
+  	fprintf(stderr, "ERROR: return code from pthread_join() is %d\n", *(int*)&stat);
+  	exit(1);
+      }
     }
 
   }
