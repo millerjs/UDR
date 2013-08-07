@@ -54,6 +54,7 @@ void set_default_udr_options(UDR_Options * options) {
     snprintf(options->key_base_filename, PATH_MAX, "%s", ".udr_key");
     options->key_filename[0] = '\0';
 
+    options->udr_file_dest[0] = '\0';
     options->host[0] = '\0';
     options->username[0] = '\0';
     options->which_process[0] = '\0';
@@ -62,16 +63,28 @@ void set_default_udr_options(UDR_Options * options) {
     options->server_config[0] = '\0';
     snprintf(options->server_port, PATH_MAX, "%s", "9000");
 
-
     options->rsync_uid = 0;
     options->rsync_gid = 0;
+
 }
 
 int get_udr_options(UDR_Options * udr_options, int argc, char * argv[], int rsync_arg_idx) {
+
+    set_default_udr_options(udr_options);
+
     int ch;
     char *key_dir = NULL;
 
-    set_default_udr_options(udr_options);
+    // Extract file destination path
+    for (ch = 0; ch < strlen(argv[argc-1]); ch++){
+      if (argv[argc-1][ch]==':'){
+	snprintf(udr_options->udr_file_dest, PATH_MAX, "%s", argv[argc-1]+ch+1);
+	break;
+      }
+    }
+
+    fprintf(stderr, "[options] filepath %s\n", udr_options->udr_file_dest);
+
 
     snprintf(udr_options->udr_program_src, PATH_MAX, "%s", argv[0]);
 
@@ -186,6 +199,8 @@ int get_udr_options(UDR_Options * udr_options, int argc, char * argv[], int rsyn
         }
     }
 
+    
+
     return 1;
 }
 
@@ -238,6 +253,7 @@ void parse_host_username(char * source, char * username, char * host, bool * dou
         host[host_len-1] = '\0';
 //        fprintf(stderr, "host_len: %d host: %s\n", host_len, host);;
     }
+
 
 }
 

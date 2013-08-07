@@ -38,6 +38,8 @@ struct UDR_Options{
   bool version_flag;
   bool server_connect;
 
+  char udr_file_dest[PATH_MAX+1];
+
   char udr_program_src[PATH_MAX+1];
   char udr_program_dest[PATH_MAX+1];
   char ssh_program[PATH_MAX+1];

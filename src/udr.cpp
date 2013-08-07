@@ -105,6 +105,8 @@ int main(int argc, char* argv[]) {
   get_udr_options(&curr_options, argc, argv, protocol_arg_idx);
   curr_options.protocol = protocol;
 
+  fprintf(stderr, "[udr] filepath %s\n", curr_options.udr_file_dest);
+
   if (curr_options.version_flag)
     print_version();
 
@@ -204,7 +206,7 @@ int main(int argc, char* argv[]) {
 	ssh_argc = 5;
 
       char ** ssh_argv;
-      ssh_argv = (char**) malloc(sizeof (char *) * ssh_argc);
+      ssh_argv = (char**) malloc(sizeof (char*) * ssh_argc);
 
       int ssh_idx = 0;
       ssh_argv[ssh_idx++] = curr_options.ssh_program;
