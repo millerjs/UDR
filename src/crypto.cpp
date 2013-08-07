@@ -19,7 +19,7 @@ and limitations under the License.
 #include "crypto.h"
 #include <stdlib.h>
 
-#define N_THREADS 3
+#define N_THREADS 100
 #define DEBUG 1
 
 void pris(char* s){
@@ -46,8 +46,9 @@ static void locking_function(int mode, int n, const char*file, int line){
 }
 
 // Returns the thread ID
-static unsigned long id_function(void){
-  return ((unsigned long) THREAD_ID);
+static void threadid_func(CRYPTO_THREADID * id){
+  pris("Setting thread ID");
+  CRYPTO_THREADID_set_numeric(id, THREAD_ID);
 }
 
 // Setups up the mutual exclusion for OpenSSL
@@ -62,7 +63,9 @@ int THREAD_setup(void){
   for (int i = 0; i < CRYPTO_num_locks(); i++)
     MUTEX_SETUP(mutex_buf[i]);
 
-  CRYPTO_set_id_callback(id_function);
+
+  // CRYPTO_set_id_callback(id_function);
+  CRYPTO_THREADID_set_callback(threadid_func);
   CRYPTO_set_locking_callback(locking_function);
 
   pris("Locking and callback functions set");
@@ -77,7 +80,8 @@ int THREAD_cleanup(void){
   if (!mutex_buf)
     return 0;
 
-  CRYPTO_set_id_callback(NULL);
+  // CRYPTO_set_id_callback(NULL);
+  CRYPTO_THREADID_set_callback(NULL);
   CRYPTO_set_locking_callback(NULL);
 
   for (int i = 0; i < CRYPTO_num_locks(); i ++)
@@ -167,14 +171,14 @@ int encrypt(char*in, char*out, int len, crypto* c){
 
   /* Free attribute and wait for the other threads */
   pthread_attr_destroy(&attr);
-  int tot = 0;
 
   for(int i = 0; i < N_THREADS; i++) {
 
     if (args[i].len > 0){
       int stat = pthread_join(thread[i], &status);
       if (stat) {
-  	fprintf(stderr, "ERROR: return code from pthread_join() is %d\n", *(int*)&stat);
+  	fprintf(stderr, "ERROR: return code from pthread_join()[%d] is %d\n",
+		i, *(int*)&stat);
   	exit(1);
       }
     }

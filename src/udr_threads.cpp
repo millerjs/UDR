@@ -154,6 +154,7 @@ void *handle_to_udt(void *threadarg) {
     }
 
     int ssize = 0;
+    // fprintf(stderr, "sending %d bytes", ssize);
     while(ssize < bytes_read) {
       if (UDT::ERROR == (ss = UDT::send(*my_args->udt_socket, outdata + ssize, bytes_read - ssize, 0))) {
 
@@ -473,12 +474,12 @@ int run_receiver(UDR_Options * udr_options) {
   else{
 
     if (udr_options->protocol == SCP)
-      cmd = strdup("scp -r -t -- ./");
-
-    rsync_cmd = (char *)malloc(strlen(cmd) + 1);
-
-    strcpy(rsync_cmd, cmd);
-
+      cmd = strdup("scp -r -t -- ");
+    
+    rsync_cmd = (char *)malloc(256);
+    // sprintf(rsync_cmd, "%s %s", cmd,    );
+    sprintf(rsync_cmd, "%s %s", cmd, "");
+    
   }
 
   if(udr_options->verbose){

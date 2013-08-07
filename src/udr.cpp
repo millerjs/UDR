@@ -108,9 +108,6 @@ int main(int argc, char* argv[]) {
   if (curr_options.version_flag)
     print_version();
 
-  // if (!use_rsync)
-  //   usage();
-
   if (curr_options.tflag) {
     return run_receiver(&curr_options);
   }//now for server mode

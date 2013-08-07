@@ -43,7 +43,8 @@ and limitations under the License.
 
 static MUTEX_TYPE *mutex_buf = NULL;
 static void locking_function(int mode, int n, const char*file, int line);
-static unsigned long id_function(void);
+/* static unsigned long id_function(void); */
+static void* id_function(CRYPTO_THREADID * id);
 int THREAD_setup(void);
 int THREAD_cleanup(void);
 void *enrypt_threaded(void* _args);
