@@ -476,8 +476,6 @@ int run_receiver(UDR_Options * udr_options) {
     if (udr_options->protocol == SCP)
       cmd = strdup("scp -r -t -- ");
 
-    fprintf(stderr, "[receiver] filepath %s\n", udr_options->udr_file_dest);
-    
     rsync_cmd = (char *)malloc(256);
     // sprintf(rsync_cmd, "%s %s", cmd,    );
     sprintf(rsync_cmd, "%s %s", cmd, udr_options->udr_file_dest);

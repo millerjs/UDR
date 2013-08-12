@@ -56,7 +56,7 @@ char * get_udr_cmd(UDR_Options * udr_options) {
       sprintf(udr_args, "%s %s", udr_args, "-t rsync");
   }  else {
     if (udr_options->protocol == SCP)
-      sprintf(udr_args, "%s -a %d -b %d %s", udr_args, udr_options->start_port, udr_options->end_port, "-t scp");
+      sprintf(udr_args, "%s -D %s -a %d -b %d %s", udr_args, udr_options->udr_file_dest, udr_options->start_port, udr_options->end_port, "-t scp");
     else if  (udr_options->protocol == RSYNC)
       sprintf(udr_args, "%s -a %d -b %d %s", udr_args, udr_options->start_port, udr_options->end_port, "-t rsync");
   }
@@ -105,7 +105,6 @@ int main(int argc, char* argv[]) {
   get_udr_options(&curr_options, argc, argv, protocol_arg_idx);
   curr_options.protocol = protocol;
 
-  fprintf(stderr, "[udr] filepath %s\n", curr_options.udr_file_dest);
 
   if (curr_options.version_flag)
     print_version();
@@ -214,6 +213,7 @@ int main(int argc, char* argv[]) {
 	ssh_argv[ssh_idx++] = "-l";
 	ssh_argv[ssh_idx++] = curr_options.username;
       }
+
       ssh_argv[ssh_idx++] = curr_options.host;
       ssh_argv[ssh_idx++] = udr_cmd;
       ssh_argv[ssh_idx++] = NULL;
@@ -292,6 +292,7 @@ int main(int argc, char* argv[]) {
 
       protocol_argv[protocol_idx++] = "-e";
 
+
       char udr_rsync_args1[100];
 
       if (curr_options.encryption)
@@ -353,6 +354,7 @@ int main(int argc, char* argv[]) {
 // 				 SCP
 // ------------------------------------------------------------------------
 
+
       // protocol_argv[protocol_idx++] = "--blocking-io";
 
       //scp_argv[scp_idx++] = curr_options.scp_timeout;
@@ -399,17 +401,22 @@ int main(int argc, char* argv[]) {
       						   strlen(udr_scp_args1) + 
       						   strlen(curr_options.port_num) + 
       						   strlen(udr_scp_args2) + 
-      						   strlen(curr_options.key_filename) + 26);
+      						   strlen(curr_options.key_filename) + PATH_MAX);
+
+      // protocol_argv[protocol_idx++] = "-D"; 
+      // protocol_argv[protocol_idx++] = strdup(curr_options.udr_file_dest);
       
-      sprintf(protocol_argv[protocol_idx], "%s -s %s -p %s %s scp %s", 
-		 curr_options.udr_program_src,
-		 curr_options.port_num, 
-		 curr_options.key_filename, 
-		 curr_options.host, "");
+      sprintf(protocol_argv[protocol_idx], "%s -D %s -s %s -p %s %s scp %s", 
+	      curr_options.udr_program_src,
+	      curr_options.udr_file_dest,
+	      curr_options.port_num, 
+	      curr_options.key_filename, 
+	      curr_options.host, "");
 
        if (args){
-	 fprintf(args, "%s -s %s -p %s %s scp %s", 
+	 fprintf(args, "%s -D %s -s %s -p %s %s scp %s", 
 		 curr_options.udr_program_src,
+		 curr_options.udr_file_dest,
 		 curr_options.port_num, 
 		 curr_options.key_filename, 
 		 curr_options.host, "");

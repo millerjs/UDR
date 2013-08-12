@@ -83,12 +83,10 @@ int get_udr_options(UDR_Options * udr_options, int argc, char * argv[], int rsyn
       }
     }
 
-    fprintf(stderr, "[options] filepath %s\n", udr_options->udr_file_dest);
-
-
     snprintf(udr_options->udr_program_src, PATH_MAX, "%s", argv[0]);
 
     static struct option long_options[] = {
+        {"destination", required_argument, NULL, 'D'},
         {"verbose", no_argument, NULL, 'v'},
         {"version", no_argument, NULL, 0},
         {"start-port", required_argument, NULL, 'a'},
@@ -110,7 +108,8 @@ int get_udr_options(UDR_Options * udr_options, int argc, char * argv[], int rsyn
 
     int option_index = 0;
 
-    while ((ch = getopt_long(rsync_arg_idx, argv, "tlvxa:b:s:h:p:c:k:o:n::", long_options, &option_index)) != -1)
+    while ((ch = getopt_long(rsync_arg_idx, argv, "D:tlvxa:b:s:h:p:c:k:o:n::", long_options, &option_index)) != -1)
+
         switch (ch) {
 	case 'a':
 	    udr_options->start_port = atoi(optarg);
@@ -132,13 +131,13 @@ int get_udr_options(UDR_Options * udr_options, int argc, char * argv[], int rsyn
 	    break;
 	case 's':
 	    udr_options->sflag = 1;
-        snprintf(udr_options->port_num, NI_MAXSERV, "%s", optarg);
+	    snprintf(udr_options->port_num, NI_MAXSERV, "%s", optarg);
 	    break;
 	case 'l':
-        snprintf(udr_options->username, PATH_MAX, "%s", optarg);
+	  snprintf(udr_options->username, PATH_MAX, "%s", optarg);
 	    break;
 	case 'p':
-        snprintf(udr_options->key_filename, PATH_MAX, "%s", optarg);
+	  snprintf(udr_options->key_filename, PATH_MAX, "%s", optarg);
 	    break;
 	case 'c':
 	    snprintf(udr_options->udr_program_dest, PATH_MAX, "%s", optarg);
@@ -150,9 +149,11 @@ int get_udr_options(UDR_Options * udr_options, int argc, char * argv[], int rsyn
 	    udr_options->verbose = true;
 	    break;
 	case 'o':
-        snprintf(udr_options->server_port, NI_MAXSERV, "%s", optarg);
-    case 'x':
-        udr_options->server_connect = true;
+	  snprintf(udr_options->server_port, NI_MAXSERV, "%s", optarg);
+	case 'x':
+	  udr_options->server_connect = true;
+	case 'D':
+	  snprintf(udr_options->udr_file_dest, PATH_MAX, "%s", optarg);
 	case 0:
 	    if (strcmp("version", long_options[option_index].name) == 0) {
 		  udr_options->version_flag = true;
