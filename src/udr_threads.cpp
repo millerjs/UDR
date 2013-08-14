@@ -32,6 +32,7 @@ and limitations under the License.
 
 #define THREADED 1
 
+
 using std::string;
 
 int ppid_poll = 5;
@@ -433,7 +434,6 @@ int run_receiver(UDR_Options * udr_options) {
   }
 
     
-
   char clienthost[NI_MAXHOST];
   char clientservice[NI_MAXSERV];
   getnameinfo((sockaddr *)&clientaddr, addrlen, clienthost, sizeof(clienthost), clientservice, sizeof(clientservice), NI_NUMERICHOST|NI_NUMERICSERV);
@@ -474,10 +474,9 @@ int run_receiver(UDR_Options * udr_options) {
   else{
 
     if (udr_options->protocol == SCP)
-      cmd = strdup("scp -r -t -- ");
+      cmd = strdup("scp -r -t --");
 
     rsync_cmd = (char *)malloc(256);
-    // sprintf(rsync_cmd, "%s %s", cmd,    );
     sprintf(rsync_cmd, "%s %s", cmd, udr_options->udr_file_dest);
     
   }

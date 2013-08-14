@@ -68,7 +68,10 @@ class crypto
 
     crypto(int direc, int len, unsigned char* password, char *encryption_type)
     {
-        //free_key( password ); can't free here because is reused by threads
+
+	    THREAD_setup();
+
+	 //free_key( password ); can't free here because is reused by threads
         const EVP_CIPHER *cipher;
 
         //aes-128|aes-256|bf|des-ede3
@@ -158,7 +161,6 @@ class crypto
 	  }
         return evp_outlen;
     }
-
     
 };
 

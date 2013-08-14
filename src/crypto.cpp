@@ -19,7 +19,7 @@ and limitations under the License.
 #include "crypto.h"
 #include <stdlib.h>
 
-#define N_THREADS 100
+#define N_THREADS 4
 #define DEBUG 1
 
 void pris(char* s){
@@ -32,13 +32,12 @@ void prii(int i){
     fprintf(stderr, "             -> %d\n", i);
 }
 
-
 const int max_block_size = 64*1024;
-
 
 // Function for OpenSSL to lock mutex
 static void locking_function(int mode, int n, const char*file, int line){
   pris("Locking crypto mutex");
+  exit(1);
   if (mode & CRYPTO_LOCK)
     MUTEX_LOCK(mutex_buf[n]);
   else
@@ -63,7 +62,6 @@ int THREAD_setup(void){
   for (int i = 0; i < CRYPTO_num_locks(); i++)
     MUTEX_SETUP(mutex_buf[i]);
 
-
   // CRYPTO_set_id_callback(id_function);
   CRYPTO_THREADID_set_callback(threadid_func);
   CRYPTO_set_locking_callback(locking_function);
@@ -72,6 +70,7 @@ int THREAD_setup(void){
 
   return 1;
 }
+
 
 // Cleans up the mutex buffer for openSSL
 int THREAD_cleanup(void){
@@ -93,6 +92,7 @@ int THREAD_cleanup(void){
 
 }
 
+
 // Wrapper for class encryption function
 void *encrypt_threaded(void* _args){
 
@@ -109,7 +109,7 @@ void *encrypt_threaded(void* _args){
 
 int encrypt(char*in, char*out, int len, crypto* c){
 
-  THREAD_setup();
+  // THREAD_setup();
 
   pris("Recieved string to encrypt");
   pris("Initializing encryption threads");
@@ -187,7 +187,7 @@ int encrypt(char*in, char*out, int len, crypto* c){
 
   pris("Encryption threads joined");
 
-  THREAD_cleanup();
+  // THREAD_cleanup();
   
   return 0;
 
