@@ -10,7 +10,7 @@
 #include <pthread.h>
 #include <stdlib.h>
 
-#define N_THREADS 10
+#define N_THREADS 6
 #define DEBUG 0
 
 #define ENC_MODE 0
@@ -30,7 +30,8 @@ typedef struct e_thread_args{
     char *out;
     int len;
     int n_threads;
-    EVP_CIPHER_CTX* c;
+    EVP_CIPHER_CTX* d;
+    EVP_CIPHER_CTX* e;
 } e_thread_args;
 
 static MUTEX_TYPE *mutex_buf = NULL;
@@ -40,7 +41,6 @@ static void* id_function(CRYPTO_THREADID * id);
 int THREAD_setup(void);
 int THREAD_cleanup(void);
 void *enrypt_threaded(void* _args);
-
 
 void pric(char* s, int len){
     int i;
@@ -94,7 +94,7 @@ int THREAD_setup(void){
 	MUTEX_SETUP(mutex_buf[i]);
 
 
-    // CRYPTO_set_id_callback(id_function);
+    /* CRYPTO_set_id_callback(id_function); */
     CRYPTO_THREADID_set_callback(threadid_func);
     CRYPTO_set_locking_callback(locking_function);
 
@@ -111,14 +111,13 @@ int THREAD_cleanup(void){
     if (!mutex_buf)
 	return 0;
 
-    // CRYPTO_set_id_callback(NULL);
+    /* CRYPTO_set_id_callback(NULL); */
     CRYPTO_THREADID_set_callback(NULL);
     CRYPTO_set_locking_callback(NULL);
 
     int i;
     for (i = 0; i < CRYPTO_num_locks(); i ++)
 	MUTEX_CLEANUP(mutex_buf[i]);
-
 
     return 1;
 
@@ -128,18 +127,21 @@ unsigned char *aes_encrypt(EVP_CIPHER_CTX *e, unsigned char *plaintext, char*out
 {
     int c_len = len + AES_BLOCK_SIZE;
     int f_len = 0;
-    EVP_EncryptInit_ex(e, NULL, NULL, NULL, NULL);
+    /* EVP_EncryptInit_ex(e, NULL, NULL, NULL, NULL); */
     EVP_EncryptUpdate(e, out, &c_len, plaintext, len);
-    EVP_EncryptFinal_ex(e, out+c_len, &f_len);
+    if (len%AES_BLOCK_SIZE)
+	EVP_EncryptFinal_ex(e, out+c_len, &f_len);
     return out;
 }
 
 unsigned char *aes_decrypt(EVP_CIPHER_CTX *e, char* plaintext, char *ciphertext, int len)
 {
-    int p_len = len, f_len = 0;
-    EVP_DecryptInit_ex(e, NULL, NULL, NULL, NULL);
+    int p_len = len + AES_BLOCK_SIZE;
+    int f_len = 0;
+    /* EVP_DecryptInit_ex(e, NULL, NULL, NULL, NULL); */
     EVP_DecryptUpdate(e, plaintext, &p_len, ciphertext, len);
-    EVP_DecryptFinal_ex(e, plaintext+p_len, &f_len);
+    if (len%AES_BLOCK_SIZE)
+	EVP_DecryptFinal_ex(e, plaintext+p_len, &f_len);
     return plaintext;
 }
 
@@ -151,12 +153,7 @@ void *encrypt_threaded(void* _args){
     // Grab arguments from void*
     e_thread_args* args = (e_thread_args*)_args;
 
-    /* int *evp_outlen = (int*)malloc(sizeof(int)); */
-    /* pris(args->in); */
-
-    /* memcpy(args->out, aes_encrypt(args->c, args->in, args->len), args->len); */
-    aes_encrypt(args->c, args->in, args->out, args->len);
-    /* args->out = aes_encrypt(args->c, args->in, args->len); */
+    aes_encrypt(args->e, args->in, args->out, args->len);
     pric(args->out, args->len);
   
     pris("EXITING THREAD");
@@ -172,13 +169,7 @@ void *decrypt_threaded(void* _args){
     // Grab arguments from void*
     e_thread_args* args = (e_thread_args*)_args;
 
-    /* int *evp_outlen = (int*)malloc(sizeof(int)); */
-    /* pris(args->in); */
-
-    /* memcpy(args->out, aes_encrypt(args->c, args->in, args->len), args->len); */
-    aes_decrypt(args->c, args->in, args->out, args->len);
-    /* args->out = aes_encrypt(args->c, args->in, args->len); */
-    /* pric(args->out, args->len); */
+    aes_decrypt(args->d, args->in, args->out, args->len);
   
     pris("EXITING THREAD");
     pthread_exit(NULL);
@@ -186,7 +177,8 @@ void *decrypt_threaded(void* _args){
 }
 
 
-int update(int mode, EVP_CIPHER_CTX* c, char* in, char*out, int len){
+/* int update(int mode, EVP_CIPHER_CTX* c, char* in, char*out, int len){ */
+int update(int mode, e_thread_args args[N_THREADS], char* in, char*out, int len){
 
     /* THREAD_setup(); */
 
@@ -202,10 +194,11 @@ int update(int mode, EVP_CIPHER_CTX* c, char* in, char*out, int len){
     pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
 
     // Create thread args
-    e_thread_args args[N_THREADS];
+    /* e_thread_args args[N_THREADS]; */
   
-    // Assign portions of in/out to each thread arg
-    size_t buf_len = (size_t) (((double)len)/N_THREADS + 1);
+    // Assign portions of in/out to each thread arg % AES_BLOCK_SIZE = 0
+    size_t buf_len = (size_t) (((double)len)/N_THREADS/AES_BLOCK_SIZE + 1)*AES_BLOCK_SIZE;
+
 
     pris("Total length"); prii(len);
     pris("buf_len"); 
@@ -214,7 +207,7 @@ int update(int mode, EVP_CIPHER_CTX* c, char* in, char*out, int len){
 
     int i;
     for (i = 0; i < N_THREADS; i++){
-	args[i].c = c;
+	/* args[i].c = c; */
 	args[i].in = in+cursor;
 	args[i].out = out+cursor;
 	args[i].len = cursor+buf_len < len ? buf_len : len-cursor;
@@ -222,7 +215,8 @@ int update(int mode, EVP_CIPHER_CTX* c, char* in, char*out, int len){
 	printf("%.*s\n", args[i].len, args[i].in);
 
 	if (args[i].len > 0)
-	    prii(args[i].len);
+	    printf("%d\n", args[i].len);
+	    /* prii(args[i].len); */
 
 	cursor += buf_len;
     }
@@ -243,7 +237,6 @@ int update(int mode, EVP_CIPHER_CTX* c, char* in, char*out, int len){
 		stat = pthread_create(&thread[i], &attr, encrypt_threaded, &(args[i])); 
 	    else
 		stat = pthread_create(&thread[i], &attr, decrypt_threaded, &(args[i])); 
-
 
 	    if (stat) {
 		printf("ERROR; return code from pthread_create() is %d\n", stat);
@@ -288,50 +281,73 @@ int aes_init(unsigned char *key_data, int key_data_len,
     int i, nrounds = 5;
     unsigned char key[32], iv[32];
 
-    EVP_BytesToKey(EVP_aes_256_cbc(), EVP_sha1(), salt, key_data, key_data_len, nrounds, key, iv);
+
+
+    /* const EVP_CIPHER *type = EVP_aes_256_cbc(); */
+    const EVP_CIPHER *type = EVP_aes_256_ctr();
+
+    EVP_BytesToKey(type, EVP_sha1(), salt, key_data, key_data_len, nrounds, key, iv);
 
     EVP_CIPHER_CTX_init(e_ctx);
-    EVP_EncryptInit_ex(e_ctx, EVP_aes_256_cbc(), NULL, key, iv);
+    EVP_EncryptInit_ex(e_ctx, type, NULL, key, iv);
+
     EVP_CIPHER_CTX_init(d_ctx);
-    EVP_DecryptInit_ex(d_ctx, EVP_aes_256_cbc(), NULL, key, iv);
+    EVP_DecryptInit_ex(d_ctx, type, NULL, key, iv);
+
+    /* EVP_EncryptInit_ex(e_ctx, NULL, NULL, NULL, NULL); */
+    /* EVP_DecryptInit_ex(d_ctx, NULL, NULL, NULL, NULL); */
+
+
+
 
     return 0;
 }
 
 int main(int argc, char **argv)
 {
-
-
+    int i;
     char *plaintext = argv[1];
     int len = strlen(plaintext)+1;
     char *ciphertext = (char*)malloc(len+AES_BLOCK_SIZE);
-
+    
     THREAD_setup();
 
-    EVP_CIPHER_CTX en, de;
+    /* EVP_CIPHER_CTX en, de; */
     unsigned int salt[] = {12345, 54321};
     unsigned char *key_data = (unsigned char*)"hello";
     int key_data_len = strlen((char*)key_data);
 
-    if (aes_init(key_data, key_data_len, (unsigned char *)&salt, &en, &de)) {
-	printf("Couldn't initialize AES cipher\n");
-	return -1;
+    pris("Creating arg array");
+    e_thread_args args[N_THREADS];
+    
+    for (i = 0;  i < N_THREADS; i++){
+
+	args[i].e = (EVP_CIPHER_CTX*) malloc(sizeof(EVP_CIPHER_CTX));
+	args[i].d = (EVP_CIPHER_CTX*) malloc(sizeof(EVP_CIPHER_CTX));
+
+	if (aes_init(key_data, key_data_len, (unsigned char *)&salt, args[i].e, args[i].d)) {
+	    printf("Couldn't initialize AES cipher [%d]\n", i);
+	    return -1;
+	}
+
     }
+
 
     /* ciphertext = aes_encrypt(&en, plaintext, len); */
     /* pric(ciphertext, len); */
-    update(ENC_MODE, &en, plaintext, ciphertext, len);
+    update(ENC_MODE, args, plaintext, ciphertext, len);
     /* pric(ciphertext, len); */
     /* aes_decrypt(&de, plaintext, ciphertext, len); */
-    update(DEC_MODE, &de, plaintext, ciphertext, len);
+    update(DEC_MODE, args, plaintext, ciphertext, len);
     /* plaintext = aes_decrypt(&de, ciphertext, len); */
+
 
     printf("Encrypted: %s\n",ciphertext);
     printf("Decrypted: %s\n\n",plaintext);
 
 
-    EVP_CIPHER_CTX_cleanup(&en);
-    EVP_CIPHER_CTX_cleanup(&de);
+    /* EVP_CIPHER_CTX_cleanup(&en); */
+    /* EVP_CIPHER_CTX_cleanup(&de); */
 
 
 
