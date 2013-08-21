@@ -32,7 +32,6 @@ and limitations under the License.
 
 #define THREADED 1
 
-
 using std::string;
 
 int ppid_poll = 5;

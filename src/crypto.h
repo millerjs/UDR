@@ -34,6 +34,8 @@ and limitations under the License.
 #include <iostream>
 #include <unistd.h>
 
+#define N_THREADS 2
+
 #define MUTEX_TYPE		pthread_mutex_t
 #define MUTEX_SETUP(x)		pthread_mutex_init(&(x), NULL)
 #define MUTEX_CLEANUP(x)	pthread_mutex_destroy(&x) 
@@ -41,13 +43,15 @@ and limitations under the License.
 #define MUTEX_UNLOCK(x)		pthread_mutex_unlock(&x)
 #define THREAD_ID		pthread_self()
 
-static MUTEX_TYPE *mutex_buf = NULL;
-static void locking_function(int mode, int n, const char*file, int line);
+/* static MUTEX_TYPE *mutex_buf = NULL; */
+/* static void locking_function(int mode, int n, const char*file, int line); */
 /* static unsigned long id_function(void); */
-static void* id_function(CRYPTO_THREADID * id);
+/* static void* id_function(CRYPTO_THREADID * id); */
 int THREAD_setup(void);
 int THREAD_cleanup(void);
 void *enrypt_threaded(void* _args);
+
+
 
 using namespace std;
 
@@ -61,10 +65,12 @@ class crypto
     int passphrase_size;
     int hex_passphrase_size;
 
-    // EVP stuff
-    EVP_CIPHER_CTX ctx;
 
     public:
+
+    // EVP stuff
+    EVP_CIPHER_CTX ctx[N_THREADS];
+    int thread_id;
 
     crypto(int direc, int len, unsigned char* password, char *encryption_type)
     {
@@ -123,14 +129,24 @@ class crypto
         memset(ivec, 0, 1024);
 
         direction = direc;
-        // EVP stuff
-        EVP_CIPHER_CTX_init(&ctx);
 
-        if (!EVP_CipherInit_ex(&ctx, cipher, NULL, password, ivec, direc)) {
-            fprintf(stderr, "error setting encryption scheme\n");
-            exit(EXIT_FAILURE);
-        }
+        // EVP stuff
+	for (int i = 0; i < N_THREADS; i++){
+	    EVP_CIPHER_CTX_init(&ctx[i]);
+
+	    if (!EVP_CipherInit_ex(&ctx[i], cipher, NULL, password, ivec, direc)) {
+		fprintf(stderr, "error setting encryption scheme\n");
+		exit(EXIT_FAILURE);
+	    }
+	}
+	
+
     }
+
+    int get_direction(void){
+	return direction;
+    }
+
 
 //    ~crypto()
 //    {
@@ -147,33 +163,47 @@ class crypto
         int evp_outlen;
 	
         if (len == 0) {
-            if (!EVP_CipherFinal_ex(&ctx, (unsigned char *)out, &evp_outlen)) {
+            if (!EVP_CipherFinal_ex(&ctx[0], (unsigned char *)out, &evp_outlen)) {
                 fprintf(stderr, "encryption error\n");
                 exit(EXIT_FAILURE);
             }
             return evp_outlen;
         }
 	
-        if(!EVP_CipherUpdate(&ctx, (unsigned char *)out, &evp_outlen, (unsigned char *)in, len))
+        if(!EVP_CipherUpdate(&ctx[0], (unsigned char *)out, &evp_outlen, (unsigned char *)in, len))
 	  {
             fprintf(stderr, "encryption error\n");
             exit(EXIT_FAILURE);
 	  }
         return evp_outlen;
     }
+
+    int encrypt2(EVP_CIPHER_CTX* c, char *in, char *out, int len)
+    {
+        int evp_outlen;
+	
+        if (len == 0) {
+            if (!EVP_CipherFinal_ex(c, (unsigned char *)out, &evp_outlen)) {
+                fprintf(stderr, "encryption error\n");
+                exit(EXIT_FAILURE);
+            }
+            return evp_outlen;
+        }
+	
+        if(!EVP_CipherUpdate(c, (unsigned char *)out, &evp_outlen, (unsigned char *)in, len))
+	    {
+		fprintf(stderr, "encryption error\n");
+		exit(EXIT_FAILURE);
+	    }
+        return evp_outlen;
+    }
+
     
 };
 
-typedef struct e_thread_args{
-  char *in;
-  char *out;
-  int len;
-  int n_threads;
-  crypto* c;
-
-} e_thread_args;
-
-int encrypt(char*in, char*out, int len, crypto* c);
+/* int encrypt(char*in, char*out, int len, crypto* c); */
+int encrypt(char* in, char* out, int len, crypto *c);
+/* int encrypt(char* in, char* out, int len, EVP_CIPHER_CTX* c[N_THREADS]); */
 
 #endif
 /* Threaded instances */
