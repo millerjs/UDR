@@ -51,8 +51,6 @@ int THREAD_setup(void);
 int THREAD_cleanup(void);
 void *enrypt_threaded(void* _args);
 
-
-
 using namespace std;
 
 class crypto
@@ -64,19 +62,17 @@ class crypto
 
     int passphrase_size;
     int hex_passphrase_size;
-
-
     public:
 
     // EVP stuff
-    EVP_CIPHER_CTX ctx[N_THREADS];
     int thread_id;
+    EVP_CIPHER_CTX ctx[N_THREADS];
+
 
     crypto(int direc, int len, unsigned char* password, char *encryption_type)
     {
-
-	    THREAD_setup();
-
+	
+	THREAD_setup();
 	 //free_key( password ); can't free here because is reused by threads
         const EVP_CIPHER *cipher;
 
@@ -132,6 +128,7 @@ class crypto
 
         // EVP stuff
 	for (int i = 0; i < N_THREADS; i++){
+
 	    EVP_CIPHER_CTX_init(&ctx[i]);
 
 	    if (!EVP_CipherInit_ex(&ctx[i], cipher, NULL, password, ivec, direc)) {
@@ -139,13 +136,10 @@ class crypto
 		exit(EXIT_FAILURE);
 	    }
 	}
-	
+
 
     }
 
-    int get_direction(void){
-	return direction;
-    }
 
 
 //    ~crypto()
@@ -161,7 +155,7 @@ class crypto
     int encrypt(char *in, char *out, int len)
     {
         int evp_outlen;
-	
+
         if (len == 0) {
             if (!EVP_CipherFinal_ex(&ctx[0], (unsigned char *)out, &evp_outlen)) {
                 fprintf(stderr, "encryption error\n");
@@ -175,26 +169,6 @@ class crypto
             fprintf(stderr, "encryption error\n");
             exit(EXIT_FAILURE);
 	  }
-        return evp_outlen;
-    }
-
-    int encrypt2(EVP_CIPHER_CTX* c, char *in, char *out, int len)
-    {
-        int evp_outlen;
-	
-        if (len == 0) {
-            if (!EVP_CipherFinal_ex(c, (unsigned char *)out, &evp_outlen)) {
-                fprintf(stderr, "encryption error\n");
-                exit(EXIT_FAILURE);
-            }
-            return evp_outlen;
-        }
-	
-        if(!EVP_CipherUpdate(c, (unsigned char *)out, &evp_outlen, (unsigned char *)in, len))
-	    {
-		fprintf(stderr, "encryption error\n");
-		exit(EXIT_FAILURE);
-	    }
         return evp_outlen;
     }
 
