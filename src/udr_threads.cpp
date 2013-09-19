@@ -113,7 +113,7 @@ void *handle_to_udt(void *threadarg) {
     
 	// using select because only checking stdin and is more portable
 	if(my_args->crypt != NULL)
-	    bytes_read = read(my_args->fd, indata, max_block_size);
+	    bytes_read = read(my_args->fd, outdata, max_block_size);
 	else
 	    bytes_read = read(my_args->fd, outdata, max_block_size);
     
@@ -138,11 +138,8 @@ void *handle_to_udt(void *threadarg) {
 
     
 	if(my_args->crypt != NULL){
-	    if (THREADED)
-		encrypt(indata, outdata, bytes_read, my_args->crypt);
-	    else 
-		my_args->crypt->encrypt(indata, outdata, bytes_read);
-
+	    crypto_update(outdata, outdata, bytes_read, my_args->crypt);
+	    
 	}
 
 
@@ -206,12 +203,9 @@ void *udt_to_handle(void *threadarg) {
 
 	int written_bytes;
 	if(my_args->crypt != NULL) {
-	    if (THREADED)
-		encrypt(indata, outdata, rs, my_args->crypt);
-	    else 
-		my_args->crypt->encrypt(indata, outdata, rs);
+	    crypto_update(indata, indata, rs, my_args->crypt);
 
-	    written_bytes = write(my_args->fd, outdata, rs);
+	    written_bytes = write(my_args->fd, indata, rs);
 	}
 	else {
 	    written_bytes = write(my_args->fd, indata, rs);

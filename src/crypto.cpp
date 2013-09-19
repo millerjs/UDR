@@ -1,6 +1,9 @@
 #include <openssl/evp.h>
 #include <openssl/crypto.h>
 
+
+#include <time.h>
+
 #include <limits.h>
 #include <unistd.h>
 
@@ -9,7 +12,7 @@
 #include <stdlib.h>
 #include <pthread.h>
 #include <stdlib.h>
-#define DEBUG 1
+#define DEBUG 0
 
 #include "crypto.h"
 
@@ -22,24 +25,13 @@
 #define MUTEX_UNLOCK(x)	   pthread_mutex_unlock(&x)
 #define THREAD_ID	   pthread_self()
 
+pthread_mutex_t c_lock;
+e_thread_args e_args[N_CRYPTO_THREADS];
+
 #define AES_BLOCK_SIZE 8
-
-typedef unsigned char uchar;
-
-typedef struct e_thread_args
-{
-    uchar *in;
-    uchar *out;
-    int len;
-    int n_threads;
-    EVP_CIPHER_CTX* ctx;
-} e_thread_args;
 
 static MUTEX_TYPE *mutex_buf = NULL;
 static void locking_function(int mode, int n, const char*file, int line);
-int THREAD_setup(void);
-int THREAD_cleanup(void);
-void *enrypt_threaded(void* _args);
 
 void pric(uchar* s, int len)
 {
@@ -50,11 +42,6 @@ void pric(uchar* s, int len)
     }
     fprintf(stderr, "\n");
 }
-
-// void pris(uchar* s){
-//     if (DEBUG)
-// 	fprintf(stderr, "[crypto debug: %u] %s\n", THREAD_ID, s);
-// }
 
 void prii(int i)
 {
@@ -67,8 +54,7 @@ const int max_block_size = 64*1024;
 // Function for OpenSSL to lock mutex
 static void locking_function(int mode, int n, const char*file, int line)
 {
-    
-    /* fprintf(stderr, "[debug] %s\n", "Handling mutex"); */
+    pris("LOCKING FUNCTION CALLED");
     if (mode & CRYPTO_LOCK)
 	MUTEX_LOCK(mutex_buf[n]);
     else
@@ -82,10 +68,12 @@ static void threadid_func(CRYPTO_THREADID * id)
     CRYPTO_THREADID_set_numeric(id, THREAD_ID);
 }
 
-// Setups up the mutual exclusion for OpenSSL
+
 int THREAD_setup(void)
 {
-
+    
+    pthread_mutex_init(&c_lock, NULL);
+    
     pris("Setting up threads");
     mutex_buf = (MUTEX_TYPE*)malloc(CRYPTO_num_locks()*sizeof(MUTEX_TYPE));
   
@@ -96,8 +84,7 @@ int THREAD_setup(void)
     for (i = 0; i < CRYPTO_num_locks(); i++)
 	MUTEX_SETUP(mutex_buf[i]);
 
-
-    /* CRYPTO_set_id_callback(id_function); */
+    // CRYPTO_set_id_callback(threadid_func);
     CRYPTO_THREADID_set_callback(threadid_func);
     CRYPTO_set_locking_callback(locking_function);
 
@@ -106,11 +93,9 @@ int THREAD_setup(void)
     return 0;
 }
 
-
 // Cleans up the mutex buffer for openSSL
 int THREAD_cleanup(void)
 {
-
     pris("Cleaning up threads");
     if (!mutex_buf)
 	return 0;
@@ -127,138 +112,138 @@ int THREAD_cleanup(void)
 
 }
 
-void *update_thread(void* _args)
+void *crypto_update_thread(void* _args)
 {
 
-    pris("entering update_threaded");
-    
+    int evp_outlen = 0;
 
-    e_thread_args* args = (e_thread_args*)_args;
-
-    int evp_outlen;
-    // int* evp_outlen = (int*)malloc(sizeof(int));
-	
-    if(!EVP_CipherUpdate(args->ctx, args->out, &evp_outlen, args->in, args->len)){
-	fprintf(stderr, "encryption error\n");
-	exit(EXIT_FAILURE);
-    }
-
-    if (evp_outlen-args->len){
-	fprintf(stderr, "Did not encrypt full length of data [%d-%d]", 
-		evp_outlen, args->len);
+    if (!_args){
+	fprintf(stderr, "Null argument passed to crypto_update_thread\n");
 	exit(1);
     }
 
-    pthread_exit(&evp_outlen);
+    e_thread_args* args = (e_thread_args*)_args;
+
+    if(!EVP_CipherUpdate(args->ctx, args->in, &evp_outlen, args->out, args->len)){
+    	fprintf(stderr, "encryption error\n");
+    	exit(EXIT_FAILURE);
+    }
+
+    if (evp_outlen-args->len){
+    	fprintf(stderr, "Did not encrypt full length of data [%d-%d]", 
+    		evp_outlen, args->len);
+    	exit(1);
+    }
+
+    args->len = evp_outlen;
+
+    pthread_mutex_lock(&c_lock);
+    args->idle = 1;
+    pthread_mutex_unlock(&c_lock);
+
+    pthread_exit(NULL);
   
 }
 
-
-/* int update(int mode, EVP_CIPHER_CTX* c, uchar* in, uchar*out, int len){ */
-int update(e_thread_args args[N_THREADS], uchar* in, uchar*out, unsigned long len)
+int crypto_update(char* in, char* out, int len, crypto *c)
 {
 
-    pris("Recieved string to encrypt");
-
-    // Create threads
-    pthread_t thread[N_THREADS];
-    pthread_attr_t attr;
-  
-    // Make threads joinable
-    pthread_attr_init(&attr);
-    pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
-
-    // Assign portions of in/out to each thread arg % AES_BLOCK_SIZE = 0
-    size_t buf_len = (size_t) (((double)len)/N_THREADS/AES_BLOCK_SIZE + 1)*AES_BLOCK_SIZE;
-    // size_t buf_len = (size_t) (((double)len)/N_THREADS + 1);
-
-    pris("Total length"); prii(len);
-  
-    unsigned long cursor = 0;
-
-    int i;
-    for (i = 0; i < N_THREADS; i++){
-	args[i].in = in+cursor;
-	args[i].out = out+cursor;
-	args[i].len = cursor+buf_len < len ? buf_len : len-cursor;
-
-	if (args[i].len>0)
-	    pris("Buffer length"); prii(args[i].len);
-	
-	cursor += args[i].len;
-	pris("cursor");prii(cursor);
-    }
-
-    pris("Encryption threads initialized");
-
-    // Spawn and run encryption threads
-    for(i = 0; i < N_THREADS; i++) {
-      
-	// Ignore unused threads but spawn the others
-	if (args[i].len > 0){
-	    
-	    int stat = pthread_create(&thread[i], NULL, update_thread, &args[i]); 
-	    
-	    if (stat) {
-		fprintf(stderr, "ERROR; return code from pthread_create() is %d\n", stat);
-		exit(1);
-		
-	    }
-
-	}
-
-    }
-
-    pris("Waiting to join encryption threads");
-
-    int evp_outlen = 0;
-
-    /* Free attribute and wait for the other threads */
-    pthread_attr_destroy(&attr);
-    for(i = 0; i < N_THREADS; i++) {
-
-	void*status;
-	if (args[i].len > 0){
-	    int stat = pthread_join(thread[i], &status);
-	    if (stat) {
-		fprintf(stderr, "ERROR: return code from pthread_join()[%d] is %d\n",
-			i, *(int*)&stat);
-		exit(1);
-	    }
-	}
-	evp_outlen += *(int*)status;
-	
-    }
-  
-    pris("Encryption threads joined");
-    return evp_outlen;
-
-}
-
-int encrypt(char* in, char* out, int len, crypto *c)
-{
-    
     int evp_outlen = 0;
     if (len == 0) {
-	for (int i = 0; i < N_THREADS; i ++){
-	    if (!EVP_CipherFinal_ex(&c->ctx[i], (uchar*)out, &evp_outlen)) {
+	
+	// FINALIZE CIPHER
+	if (!EVP_CipherFinal_ex(&c->ctx[0], (uchar*)in, &evp_outlen)) {
 	    	fprintf(stderr, "encryption error\n");
 	    	exit(EXIT_FAILURE);
-	    }
 	}
 
     } else {
-	e_thread_args args[N_THREADS];
-	for (int i = 0;  i < N_THREADS; i++)
-	    args[i].ctx = &c->ctx[i];
-	evp_outlen = update(args, (uchar*)in, (uchar*)out, len);
+
+    	// [EN][DE]CRYPT
+    	if(!EVP_CipherUpdate(&c->ctx[0], (uchar*)in, &evp_outlen, (uchar*)in, len)){
+    	    fprintf(stderr, "encryption error\n");
+    	    exit(EXIT_FAILURE);
+    	}
+
+    	// DOUBLE CHECK
+    	if (evp_outlen-len){
+    	    fprintf(stderr, "Did not encrypt full length of data [%d-%d]", 
+    		    evp_outlen, len);
+    	    exit(EXIT_FAILURE);
+    	}
 
     }
 
     return evp_outlen;
 
+}
 
+int pthread_join_disregard_ESRCH(pthread_t thread, crypto*c, int thread_id){
+
+    if (c->is_thread_joined[thread_id])
+	return 0;
+
+    int ret = pthread_join(thread, NULL);
+
+    pthread_mutex_lock(&c_lock);
+    c->is_thread_joined[thread_id] = 1;
+    pthread_mutex_unlock(&c_lock);
+    
+    if (ret){
+	if (ret != ESRCH){
+	    fprintf(stderr, "Unable to join encryption thread: %d\n", ret);
+	    exit(1);
+	}
+    }
+
+    return 0;
 
 }
 
+int join_all_encryption_threads(crypto *c){
+
+    for (int i = 0; i < N_CRYPTO_THREADS; i++)
+	pthread_join_disregard_ESRCH(c->threads[i], c, i);
+
+    return 0;
+
+}
+
+int pass_to_enc_thread(char* in, char*out, int len, crypto*c){
+
+    // ----------- [ Join the thread we're about to use
+    pthread_join_disregard_ESRCH(c->threads[c->thread_id], c, c->thread_id);
+
+    // ----------- [ Initialize and set thread detached attribute
+    pthread_attr_t attr;
+    pthread_attr_init(&attr);
+    pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
+
+    // ----------- [ Setup thread
+    e_args[c->thread_id].in = (uchar*) in;
+    e_args[c->thread_id].out = (uchar*) out;
+    e_args[c->thread_id].len = len;
+    e_args[c->thread_id].ctx = &c->ctx[c->thread_id];
+
+    // ----------- [ Spawn thread
+    int ret = pthread_create(&c->threads[c->thread_id],
+			     &attr, crypto_update_thread, 
+			     &e_args[c->thread_id]);
+
+    pthread_mutex_lock(&c_lock);
+    c->is_thread_joined[c->thread_id] = 0;
+
+    if (ret){
+	fprintf(stderr, "Unable to create thread: %d\n", ret);
+	exit(1);
+    }
+
+    c->thread_id = c->thread_id+1;
+    if (c->thread_id>=N_CRYPTO_THREADS)
+	c->thread_id = 0;
+
+    pthread_mutex_unlock(&c_lock);
+
+    return 0;
+}
 

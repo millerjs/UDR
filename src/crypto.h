@@ -18,11 +18,17 @@ and limitations under the License.
 #ifndef CRYPTO_H
 #define CRYPTO_H
 
+#define N_CRYPTO_THREADS 8
+#define USE_CRYPTO 1
+
+
 #define PASSPHRASE_SIZE 32
 #define HEX_PASSPHRASE_SIZE 64
 #define EVP_ENCRYPT 1
 #define EVP_DECRYPT 0
 #define CTR_MODE 1
+
+
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -34,8 +40,6 @@ and limitations under the License.
 #include <iostream>
 #include <unistd.h>
 
-#define N_THREADS 2
-
 #define MUTEX_TYPE		pthread_mutex_t
 #define MUTEX_SETUP(x)		pthread_mutex_init(&(x), NULL)
 #define MUTEX_CLEANUP(x)	pthread_mutex_destroy(&x) 
@@ -43,15 +47,15 @@ and limitations under the License.
 #define MUTEX_UNLOCK(x)		pthread_mutex_unlock(&x)
 #define THREAD_ID		pthread_self()
 
-/* static MUTEX_TYPE *mutex_buf = NULL; */
-/* static void locking_function(int mode, int n, const char*file, int line); */
-/* static unsigned long id_function(void); */
-/* static void* id_function(CRYPTO_THREADID * id); */
 int THREAD_setup(void);
 int THREAD_cleanup(void);
 void *enrypt_threaded(void* _args);
 
+
+
 using namespace std;
+
+typedef unsigned char uchar;
 
 class crypto
 {
@@ -60,14 +64,17 @@ class crypto
     unsigned char ivec[ 1024 ];
     int direction;
 
+
     int passphrase_size;
     int hex_passphrase_size;
-    public:
-
+ public:
+       
     // EVP stuff
     int thread_id;
-    EVP_CIPHER_CTX ctx[N_THREADS];
+    EVP_CIPHER_CTX ctx[N_CRYPTO_THREADS];
 
+    pthread_t threads[N_CRYPTO_THREADS];
+    int is_thread_joined[N_CRYPTO_THREADS];
 
     crypto(int direc, int len, unsigned char* password, char *encryption_type)
     {
@@ -122,20 +129,25 @@ class crypto
             exit(EXIT_FAILURE);
         }
 
-        memset(ivec, 0, 1024);
-
         direction = direc;
 
         // EVP stuff
-	for (int i = 0; i < N_THREADS; i++){
+	for (int i = 0; i < N_CRYPTO_THREADS; i++){
+
+	    memset(ivec, 0, 1024);
 
 	    EVP_CIPHER_CTX_init(&ctx[i]);
 
 	    if (!EVP_CipherInit_ex(&ctx[i], cipher, NULL, password, ivec, direc)) {
-		fprintf(stderr, "error setting encryption scheme\n");
-		exit(EXIT_FAILURE);
+	    	fprintf(stderr, "error setting encryption scheme\n");
+	    	exit(EXIT_FAILURE);
 	    }
+	    
 	}
+
+	thread_id = 0;
+	for (int i = 0; i < N_CRYPTO_THREADS; i++)
+	    is_thread_joined[i] = 1;
 
 
     }
@@ -175,10 +187,24 @@ class crypto
     
 };
 
-/* int encrypt(char*in, char*out, int len, crypto* c); */
-int encrypt(char* in, char* out, int len, crypto *c);
-/* int encrypt(char* in, char* out, int len, EVP_CIPHER_CTX* c[N_THREADS]); */
+
+
+typedef struct e_thread_args
+{
+    uchar *in;
+    uchar *out;
+    int len;
+    crypto *c;
+    EVP_CIPHER_CTX *ctx;
+    int idle;
+
+} e_thread_args;
+
+int crypto_update(char* in, char* data, int len, crypto *c);
+void *crypto_update_thread(void* _args);
+int join_all_encryption_threads(crypto *c);
+int pass_to_enc_thread(char* in, char* out, int len, crypto*c);
+
 
 #endif
-/* Threaded instances */
 
