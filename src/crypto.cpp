@@ -26,7 +26,6 @@
 #define THREAD_ID	   pthread_self()
 
 pthread_mutex_t c_lock;
-e_thread_args e_args[N_CRYPTO_THREADS];
 
 #define AES_BLOCK_SIZE 8
 
@@ -220,15 +219,15 @@ int pass_to_enc_thread(char* in, char*out, int len, crypto*c){
     pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
 
     // ----------- [ Setup thread
-    e_args[c->thread_id].in = (uchar*) in;
-    e_args[c->thread_id].out = (uchar*) out;
-    e_args[c->thread_id].len = len;
-    e_args[c->thread_id].ctx = &c->ctx[c->thread_id];
+    c->e_args[c->thread_id].in = (uchar*) in;
+    c->e_args[c->thread_id].out = (uchar*) out;
+    c->e_args[c->thread_id].len = len;
+    c->e_args[c->thread_id].ctx = &c->ctx[c->thread_id];
 
     // ----------- [ Spawn thread
     int ret = pthread_create(&c->threads[c->thread_id],
 			     &attr, crypto_update_thread, 
-			     &e_args[c->thread_id]);
+			     &c->e_args[c->thread_id]);
 
     pthread_mutex_lock(&c_lock);
     c->is_thread_joined[c->thread_id] = 0;

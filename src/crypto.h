@@ -57,6 +57,16 @@ using namespace std;
 
 typedef unsigned char uchar;
 
+typedef struct e_thread_args
+{
+    uchar *in;
+    uchar *out;
+    int len;
+    EVP_CIPHER_CTX *ctx;
+    int idle;
+
+} e_thread_args;
+
 class crypto
 {
     private:
@@ -72,7 +82,8 @@ class crypto
     // EVP stuff
     int thread_id;
     EVP_CIPHER_CTX ctx[N_CRYPTO_THREADS];
-
+    e_thread_args e_args[N_CRYPTO_THREADS];
+ 
     pthread_t threads[N_CRYPTO_THREADS];
     int is_thread_joined[N_CRYPTO_THREADS];
 
@@ -188,17 +199,6 @@ class crypto
 };
 
 
-
-typedef struct e_thread_args
-{
-    uchar *in;
-    uchar *out;
-    int len;
-    crypto *c;
-    EVP_CIPHER_CTX *ctx;
-    int idle;
-
-} e_thread_args;
 
 int crypto_update(char* in, char* data, int len, crypto *c);
 void *crypto_update_thread(void* _args);

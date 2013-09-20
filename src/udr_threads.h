@@ -22,6 +22,7 @@ and limitations under the License.
 #include "crypto.h"
 #include "udr_options.h"
 
+/* const int max_block_size = 64*1024; //what should this be? maybe based on UDT buffer size? */
 const int max_block_size = 64*1024; //what should this be? maybe based on UDT buffer size?
  
 struct thread_data{

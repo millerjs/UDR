@@ -39,6 +39,11 @@ bool thread_log = false;
 
 string local_logfile_dir = "../log";
 
+int min(int x, int y)
+{
+    return x < y ? x : y;
+}
+
 void print_bytes(FILE* file, const void *object, size_t size) 
 {
     size_t i;
@@ -91,9 +96,17 @@ void *handle_to_udt(void *threadarg) {
     signal(SIGUSR1,sigexit);
 
     struct thread_data *my_args = (struct thread_data *) threadarg;
-    char indata[max_block_size];
-    char outdata[max_block_size];
+    char indata[max_block_size+sizeof(int)];
+    char outdata[max_block_size+sizeof(int)];
     FILE*  logfile;
+
+    int crypto_buff_len = max_block_size/N_CRYPTO_THREADS + 1;
+
+    int offset;
+    if (my_args->crypt)
+	offset = sizeof(int)/sizeof(char);
+    else 
+	offset = 0;
 
     if(my_args->log) {
 	string filename = my_args->logfile_dir + convert_int(my_args->id) + "_log.txt";
@@ -102,6 +115,8 @@ void *handle_to_udt(void *threadarg) {
     //struct timeval tv;
     //fd_set readfds;
     int bytes_read;
+    int c = 0;
+    
 
     while(true) {
 	int ss;
@@ -111,14 +126,9 @@ void *handle_to_udt(void *threadarg) {
 	    fflush(logfile);
 	}
     
-	// using select because only checking stdin and is more portable
-	if(my_args->crypt != NULL)
-	    bytes_read = read(my_args->fd, outdata, max_block_size);
-	else
-	    bytes_read = read(my_args->fd, outdata, max_block_size);
-    
+	bytes_read = read(my_args->fd, outdata+offset, max_block_size);
+	
 	if(bytes_read < 0){
-
 	    if(my_args->log){
 		fprintf(logfile, "Error: bytes_read %d %s\n", bytes_read, strerror(errno));
 		fclose(logfile);
@@ -136,9 +146,27 @@ void *handle_to_udt(void *threadarg) {
 	    return NULL;
 	}
 
-    
 	if(my_args->crypt != NULL){
-	    crypto_update(outdata, outdata, bytes_read, my_args->crypt);
+
+	    *((int*)outdata) = bytes_read;
+	    int crypto_cursor = 0;
+	    for (int i = 0; i < N_CRYPTO_THREADS; i ++){
+
+		if (crypto_cursor >= bytes_read)
+		    break;
+
+		int size = min(crypto_buff_len, bytes_read-crypto_cursor);
+		// crypto_update(outdata+offset+crypto_cursor, outdata+offset+crypto_cursor, 
+		pass_to_enc_thread(outdata+offset+crypto_cursor, outdata+offset+crypto_cursor, 
+			      size, my_args->crypt);
+
+		crypto_cursor += size;
+		
+	    }
+
+	    join_all_encryption_threads(my_args->crypt);
+	    
+	    bytes_read+=offset;
 	    
 	}
 
@@ -150,10 +178,11 @@ void *handle_to_udt(void *threadarg) {
 	}
 
 	int ssize = 0;
-	// fprintf(stderr, "sending %d bytes", ssize);
 	while(ssize < bytes_read) {
+		    
+	    
 	    if (UDT::ERROR == (ss = UDT::send(*my_args->udt_socket, outdata + ssize, bytes_read - ssize, 0))) {
-
+		
 		if(my_args->log) {
 		    fprintf(logfile, "%d send error: %s\n", my_args->id, UDT::getlasterror().getErrorMessage());
 		    fclose(logfile);
@@ -161,7 +190,7 @@ void *handle_to_udt(void *threadarg) {
 		my_args->is_complete = true;
 		return NULL;
 	    }
-      
+
 	    ssize += ss;
 	    if(my_args->log) {
 		fprintf(logfile, "%d sender on socket %d bytes read: %d ssize: %d\n", my_args->id, *my_args->udt_socket, bytes_read, ssize);
@@ -179,11 +208,26 @@ void *udt_to_handle(void *threadarg) {
     char outdata[max_block_size];
     FILE* logfile;
 
+    int crypto_buff_len = max_block_size/N_CRYPTO_THREADS + 1;
+
+    int offset;
+    if (my_args->crypt)
+	offset = sizeof(int)/sizeof(char);
+    else
+	offset = 0;
+
+
     if(my_args->log) {
 	string filename = my_args->logfile_dir + convert_int(my_args->id) + "_log.txt";
 	logfile = fopen(filename.c_str(), "w");
     }
 
+    int block_size = 0;
+    int new_block = 1;
+    int buffer_cursor = 0;
+    int crypto_cursor = 0;
+    int c = 0;
+    
     while(true) {
 	int rs;
 
@@ -191,8 +235,25 @@ void *udt_to_handle(void *threadarg) {
 	    fprintf(logfile, "%d: Should now be receiving from udt...\n", my_args->id);
 	    fflush(logfile);
 	}
+	
+	if (new_block){
+	    rs = UDT::recv(*my_args->udt_socket, (char*)&block_size, offset, 0);
 
-	if (UDT::ERROR == (rs = UDT::recv(*my_args->udt_socket, indata, max_block_size, 0))) {
+	    if (UDT::ERROR == rs) {
+		if(my_args->log){
+		    fprintf(logfile, "%d recv error: %s\n", my_args->id, 
+			    UDT::getlasterror().getErrorMessage());
+		    fclose(logfile);
+		}
+		my_args->is_complete = true;
+		return NULL;
+	    }
+	    new_block = 0;
+	    buffer_cursor = 0;
+	}
+
+	rs = UDT::recv(*my_args->udt_socket, indata+buffer_cursor, block_size-buffer_cursor, 0);
+	if (UDT::ERROR == rs) {
 	    if(my_args->log){
 		fprintf(logfile, "%d recv error: %s\n", my_args->id, UDT::getlasterror().getErrorMessage());
 		fclose(logfile);
@@ -201,15 +262,54 @@ void *udt_to_handle(void *threadarg) {
 	    return NULL;
 	}
 
-	int written_bytes;
-	if(my_args->crypt != NULL) {
-	    crypto_update(indata, indata, rs, my_args->crypt);
 
+	buffer_cursor += rs;
+	int written_bytes;
+
+
+	if(my_args->crypt) {
+
+	    // ----------- [ Decrypt any full encryption buffer sectors
+	    while (crypto_cursor+crypto_buff_len <= buffer_cursor){
+		
+		int size = min(rs, crypto_buff_len);
+		// crypto_update(indata+crypto_cursor, indata+crypto_cursor, 
+		pass_to_enc_thread(indata+crypto_cursor, indata+crypto_cursor, 
+				   size, my_args->crypt);
+
+		crypto_cursor += size;
+		
+	    }
+
+	    // ----------- [ If we received the whole block
+	    if (buffer_cursor >= block_size && block_size){
+		if (crypto_cursor < block_size){
+
+		    // fprintf(stderr, "%d [%d] decrypt: %d\n", c++, getpid(), 
+			    // block_size-crypto_cursor);
+
+		    // crypto_update(indata+crypto_cursor, indata+crypto_cursor, 
+		    pass_to_enc_thread(indata+crypto_cursor, indata+crypto_cursor, 
+				  block_size-crypto_cursor, my_args->crypt);
+		    crypto_cursor += rs;
+		}
+		
+		join_all_encryption_threads(my_args->crypt);
+		written_bytes = write(my_args->fd, indata, block_size);
+		buffer_cursor = crypto_cursor = 0;
+		new_block = 1;
+
+
+
+	    } 
+	    
+	    
+	} else {
 	    written_bytes = write(my_args->fd, indata, rs);
 	}
-	else {
-	    written_bytes = write(my_args->fd, indata, rs);
-	}
+
+	
+
 
 	if(my_args->log) {
 	    fprintf(logfile, "%d recv on socket %d rs: %d written bytes: %d\n", my_args->id, *my_args->udt_socket, rs, written_bytes);
