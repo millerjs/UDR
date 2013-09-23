@@ -101,7 +101,7 @@ void *handle_to_udt(void *threadarg) {
     char outdata[max_block_size+sizeof(int)];
     FILE*  logfile;
 
-    int crypto_buff_len = max_block_size/N_CRYPTO_THREADS;
+    int crypto_buff_len = max_block_size/N_CRYPTO_THREADS+1;
 
     int offset;
     if (my_args->crypt)
@@ -126,7 +126,7 @@ void *handle_to_udt(void *threadarg) {
 	    fprintf(logfile, "%d: Should be reading from process...\n", my_args->id);
 	    fflush(logfile);
 	}
-    
+
 	bytes_read = read(my_args->fd, outdata+offset, max_block_size);
 	
 	if(bytes_read < 0){
@@ -152,11 +152,12 @@ void *handle_to_udt(void *threadarg) {
 
 	    *((int*)outdata) = bytes_read;
 	    int crypto_cursor = 0;
-
-	    fprintf(stderr, "%d%d not encrypt [%d] %d ", c++, my_args->crypt->get_thread_id(), 
-		    getpid(), bytes_read);
-	    print_bytes(stderr, outdata, 16);
-
+	    
+	    if (DEBUG){
+		fprintf(stderr, "%d %d not encrypt [%d] %d ", c++, my_args->crypt->get_thread_id(), 
+			getpid(), bytes_read);
+		print_bytes(stderr, outdata, 16);
+	    }
 
 	    while (crypto_cursor < bytes_read){
 		
@@ -171,9 +172,6 @@ void *handle_to_udt(void *threadarg) {
 
 	    join_all_encryption_threads(my_args->crypt);
 	    bytes_read += offset;
-	    if (DEBUG){
-
-	    }
 
 	}
 
@@ -216,7 +214,7 @@ void *udt_to_handle(void *threadarg) {
     struct thread_data *my_args = (struct thread_data *) threadarg;
     FILE* logfile;
 
-    int crypto_buff_len = max_block_size/N_CRYPTO_THREADS;
+    int crypto_buff_len = max_block_size/N_CRYPTO_THREADS+1;
 
     int offset;
     if (my_args->crypt)
@@ -301,40 +299,46 @@ void *udt_to_handle(void *threadarg) {
 	if(my_args->crypt) {
 
 	    // Decrypt any full encryption buffer sectors
-	    while (crypto_cursor+crypto_buff_len < buffer_cursor){
-		
+	    while (crypto_cursor + crypto_buff_len < buffer_cursor){
+
 		pass_to_enc_thread(indata+crypto_cursor, indata+crypto_cursor, 
 				   crypto_buff_len, my_args->crypt);
-
 		crypto_cursor += crypto_buff_len;
+
+		if (DEBUG){
+		    fprintf(stderr, "%d %d decrypt [%d] %d \n", c++, 
+			    my_args->crypt->get_thread_id(),
+		    	    getpid(), buffer_cursor);
+		}
+
+
 		
 	    }
 
 	    // If we received the whole block
 	    if (buffer_cursor == block_size){
 
-		if (crypto_cursor <= buffer_cursor){
+		if (DEBUG){
+		    fprintf(stderr, "%d %d decrypt [%d] %d ", c++, 
+			    my_args->crypt->get_thread_id(),
+		    	    getpid(), buffer_cursor);
 
-		    pass_to_enc_thread(indata+crypto_cursor, indata+crypto_cursor, 
-				  buffer_cursor-crypto_cursor, my_args->crypt);
-
-		    crypto_cursor += buffer_cursor-crypto_cursor;
 		}
+
+		int size = min(crypto_buff_len, buffer_cursor - crypto_cursor);
+		pass_to_enc_thread(indata+crypto_cursor, indata+crypto_cursor, 
+				   size, my_args->crypt);
+		crypto_cursor += size;
 
 		join_all_encryption_threads(my_args->crypt);
 
-		if (DEBUG){
-		    fprintf(stderr, "%d%d decrypt [%d] %d \n", c++, 
-			    my_args->crypt->get_thread_id(),
-		    	    getpid(), buffer_cursor);
+		if (DEBUG)
 		    print_bytes(stderr, indata, 16);
-		}
 
 		written_bytes = write(my_args->fd, indata, block_size);
 		buffer_cursor = 0;
 		crypto_cursor = 0;
 		new_block = 1;
-
 
 	    } 
 	    

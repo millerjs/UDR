@@ -21,14 +21,11 @@ and limitations under the License.
 #define N_CRYPTO_THREADS 4
 #define USE_CRYPTO 1
 
-
 #define PASSPHRASE_SIZE 32
 #define HEX_PASSPHRASE_SIZE 64
 #define EVP_ENCRYPT 1
 #define EVP_DECRYPT 0
 #define CTR_MODE 1
-
-
 
 #include <stdio.h>
 #include <stdlib.h>

@@ -162,9 +162,9 @@ void *crypto_update_thread(void* _args)
     int total = 0;
     crypto *c = (crypto*)args->c;
     
-    for (int i; i < args->len; i ++){
-    	args->out[i] = args->in[i]^args->thread_id;
-    }
+    // for (int i; i < args->len; i ++){
+    // 	args->out[i] = args->in[i]^args->thread_id;
+    // }
     
     while (total < args->len){
 	
@@ -183,7 +183,6 @@ void *crypto_update_thread(void* _args)
     }
     
     args->len = total;
-    // fprintf(stderr, "unlocking in encrypt %d\n", args->thread_id);
     c->unlock(args->thread_id);
 
     return NULL;

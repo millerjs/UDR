@@ -23,8 +23,12 @@ and limitations under the License.
 #include "udr_options.h"
 
 /* const int max_block_size = 64*1024; //what should this be? maybe based on UDT buffer size? */
-const int max_block_size = 2*32768; //what should this be? maybe based on UDT buffer size?
-/* const int max_block_size = 67108864; //what should this be? maybe based on UDT buffer size? */
+
+/* This needs to be based on the rsync buffer size.  If it's any */
+/* larger, you will see less gains in mt crypt because distribution is */
+/* less even. */
+const int max_block_size = 32768;  
+
  
 struct thread_data{
     UDTSOCKET * udt_socket;
