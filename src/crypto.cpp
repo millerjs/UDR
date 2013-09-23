@@ -25,8 +25,6 @@
 #define MUTEX_UNLOCK(x)	   pthread_mutex_unlock(&x)
 #define THREAD_ID	   pthread_self()
 
-pthread_mutex_t c_lock;
-
 #define AES_BLOCK_SIZE 8
 
 static MUTEX_TYPE *mutex_buf = NULL;
@@ -71,8 +69,6 @@ static void threadid_func(CRYPTO_THREADID * id)
 int THREAD_setup(void)
 {
     
-    pthread_mutex_init(&c_lock, NULL);
-    
     pris("Setting up threads");
     mutex_buf = (MUTEX_TYPE*)malloc(CRYPTO_num_locks()*sizeof(MUTEX_TYPE));
   
@@ -111,47 +107,19 @@ int THREAD_cleanup(void)
 
 }
 
-void *crypto_update_thread(void* _args)
-{
-
-    int evp_outlen = 0;
-
-    if (!_args){
-	fprintf(stderr, "Null argument passed to crypto_update_thread\n");
-	exit(1);
-    }
-
-    e_thread_args* args = (e_thread_args*)_args;
-
-    if(!EVP_CipherUpdate(args->ctx, args->in, &evp_outlen, args->out, args->len)){
-    	fprintf(stderr, "encryption error\n");
-    	exit(EXIT_FAILURE);
-    }
-
-    if (evp_outlen-args->len){
-    	fprintf(stderr, "Did not encrypt full length of data [%d-%d]", 
-    		evp_outlen, args->len);
-    	exit(1);
-    }
-
-    args->len = evp_outlen;
-
-    pthread_mutex_lock(&c_lock);
-    args->idle = 1;
-    pthread_mutex_unlock(&c_lock);
-
-    pthread_exit(NULL);
-  
-}
 
 int crypto_update(char* in, char* out, int len, crypto *c)
 {
 
     int evp_outlen = 0;
+    int i = c->get_thread_id();
+    c->increment_thread_id();
+    c->lock(i);
+
     if (len == 0) {
 	
 	// FINALIZE CIPHER
-	if (!EVP_CipherFinal_ex(&c->ctx[0], (uchar*)in, &evp_outlen)) {
+	if (!EVP_CipherFinal_ex(&c->ctx[i], (uchar*)in, &evp_outlen)) {
 	    	fprintf(stderr, "encryption error\n");
 	    	exit(EXIT_FAILURE);
 	}
@@ -159,7 +127,7 @@ int crypto_update(char* in, char* out, int len, crypto *c)
     } else {
 
     	// [EN][DE]CRYPT
-    	if(!EVP_CipherUpdate(&c->ctx[0], (uchar*)in, &evp_outlen, (uchar*)in, len)){
+    	if(!EVP_CipherUpdate(&c->ctx[i], (uchar*)in, &evp_outlen, (uchar*)in, len)){
     	    fprintf(stderr, "encryption error\n");
     	    exit(EXIT_FAILURE);
     	}
@@ -173,27 +141,62 @@ int crypto_update(char* in, char* out, int len, crypto *c)
 
     }
 
+    c->unlock(i);
+
     return evp_outlen;
 
 }
 
+
+void *crypto_update_thread(void* _args)
+{
+
+    int evp_outlen = 0;
+
+    if (!_args){
+	fprintf(stderr, "Null argument passed to crypto_update_thread\n");
+	exit(1);
+    }
+
+    e_thread_args* args = (e_thread_args*)_args;
+    int total = 0;
+    crypto *c = (crypto*)args->c;
+
+    // for (int i; i < args->len; i ++){
+    // 	args->out[i] = args->in[i]^args->thread_id;
+    // }
+
+    while (total < args->len){
+
+    	if(!EVP_CipherUpdate(args->ctx, args->in+total, &evp_outlen, 
+    			     args->out+total, args->len-total)){
+    	    fprintf(stderr, "encryption error\n");
+    	    exit(EXIT_FAILURE);
+    	}
+    	total += evp_outlen;
+    }
+    
+    if (total != args->len){
+    	fprintf(stderr, "Did not encrypt full length of data [%d-%d]", 
+    		evp_outlen, args->len);
+    	exit(1);
+    }
+    
+    args->len = total;
+    // fprintf(stderr, "unlocking in encrypt %d\n", args->thread_id);
+    c->unlock(args->thread_id);
+
+    return NULL;
+    // pthread_exit(NULL);
+    
+}
+
 int pthread_join_disregard_ESRCH(pthread_t thread, crypto*c, int thread_id){
 
-    if (c->is_thread_joined[thread_id])
-	return 0;
-
-    int ret = pthread_join(thread, NULL);
-
-    pthread_mutex_lock(&c_lock);
-    c->is_thread_joined[thread_id] = 1;
-    pthread_mutex_unlock(&c_lock);
-    
-    if (ret){
-	if (ret != ESRCH){
-	    fprintf(stderr, "Unable to join encryption thread: %d\n", ret);
-	    exit(1);
-	}
-    }
+    // fprintf(stderr, "Locking in join %d\n", thread_id);
+    c->lock(thread_id);
+    // fprintf(stderr, "unlocking in join %d\n", thread_id);
+    c->unlock(thread_id);
 
     return 0;
 
@@ -201,47 +204,62 @@ int pthread_join_disregard_ESRCH(pthread_t thread, crypto*c, int thread_id){
 
 int join_all_encryption_threads(crypto *c){
 
-    for (int i = 0; i < N_CRYPTO_THREADS; i++)
-	pthread_join_disregard_ESRCH(c->threads[i], c, i);
+    if (!c){
+	fprintf(stderr, "join_all_encryption_threads passed null pointer\n");
+	return 0;
+    }
 
+    
+    for (int i = 0; i < N_CRYPTO_THREADS; i++){
+	pthread_join_disregard_ESRCH(c->threads[i], c, i);
+    }
+    
     return 0;
 
 }
 
 int pass_to_enc_thread(char* in, char*out, int len, crypto*c){
 
+
     // ----------- [ Join the thread we're about to use
-    pthread_join_disregard_ESRCH(c->threads[c->thread_id], c, c->thread_id);
+    int thread_id = c->get_thread_id();
+    c->increment_thread_id();
+
+    // pthread_join_disregard_ESRCH(c->threads[thread_id], c, thread_id);
+    // fprintf(stderr, "locking in pass %d\n", thread_id);    
+    c->lock(thread_id);
 
     // ----------- [ Initialize and set thread detached attribute
     pthread_attr_t attr;
     pthread_attr_init(&attr);
-    pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
+    // pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
+    pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
 
     // ----------- [ Setup thread
-    c->e_args[c->thread_id].in = (uchar*) in;
-    c->e_args[c->thread_id].out = (uchar*) out;
-    c->e_args[c->thread_id].len = len;
-    c->e_args[c->thread_id].ctx = &c->ctx[c->thread_id];
+    c->e_args[thread_id].in = (uchar*) in;
+    c->e_args[thread_id].out = (uchar*) out;
+    c->e_args[thread_id].len = len;
+    c->e_args[thread_id].ctx = &c->ctx[thread_id];
+    c->e_args[thread_id].c = c;
+    c->e_args[thread_id].thread_id = thread_id;
 
     // ----------- [ Spawn thread
-    int ret = pthread_create(&c->threads[c->thread_id],
-			     &attr, crypto_update_thread, 
-			     &c->e_args[c->thread_id]);
 
-    pthread_mutex_lock(&c_lock);
-    c->is_thread_joined[c->thread_id] = 0;
+    int ret = 1;
+	
+    while (ret){
+	ret = pthread_create(&c->threads[thread_id],
+			     &attr, &crypto_update_thread, 
+			     &c->e_args[thread_id]);
+    
+	if (ret){
+	    fprintf(stderr, "Unable to create thread: %d\n", ret);
+	    // exit(1);
+	}
 
-    if (ret){
-	fprintf(stderr, "Unable to create thread: %d\n", ret);
-	exit(1);
     }
 
-    c->thread_id = c->thread_id+1;
-    if (c->thread_id>=N_CRYPTO_THREADS)
-	c->thread_id = 0;
 
-    pthread_mutex_unlock(&c_lock);
 
     return 0;
 }
