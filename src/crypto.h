@@ -18,7 +18,7 @@ and limitations under the License.
 #ifndef CRYPTO_H
 #define CRYPTO_H
 
-#define N_CRYPTO_THREADS 2
+#define N_CRYPTO_THREADS 4
 #define USE_CRYPTO 1
 
 

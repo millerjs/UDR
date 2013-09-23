@@ -161,13 +161,13 @@ void *crypto_update_thread(void* _args)
     e_thread_args* args = (e_thread_args*)_args;
     int total = 0;
     crypto *c = (crypto*)args->c;
-
-    // for (int i; i < args->len; i ++){
-    // 	args->out[i] = args->in[i]^args->thread_id;
-    // }
-
+    
+    for (int i; i < args->len; i ++){
+    	args->out[i] = args->in[i]^args->thread_id;
+    }
+    
     while (total < args->len){
-
+	
     	if(!EVP_CipherUpdate(args->ctx, args->in+total, &evp_outlen, 
     			     args->out+total, args->len-total)){
     	    fprintf(stderr, "encryption error\n");

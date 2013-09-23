@@ -97,11 +97,11 @@ void *handle_to_udt(void *threadarg) {
     signal(SIGUSR1,sigexit);
 
     struct thread_data *my_args = (struct thread_data *) threadarg;
-    char indata[max_block_size+sizeof(int)];
+    // char indata[max_block_size+sizeof(int)];
     char outdata[max_block_size+sizeof(int)];
     FILE*  logfile;
 
-    int crypto_buff_len = max_block_size/N_CRYPTO_THREADS + 1;
+    int crypto_buff_len = max_block_size/N_CRYPTO_THREADS;
 
     int offset;
     if (my_args->crypt)
@@ -146,18 +146,23 @@ void *handle_to_udt(void *threadarg) {
 	    my_args->is_complete = true;
 	    return NULL;
 	}
+	
 
 	if(my_args->crypt != NULL){
 
 	    *((int*)outdata) = bytes_read;
-	    int crypto_cursor = offset;
-	    bytes_read += offset;
+	    int crypto_cursor = 0;
+
+	    fprintf(stderr, "%d%d not encrypt [%d] %d ", c++, my_args->crypt->get_thread_id(), 
+		    getpid(), bytes_read);
+	    print_bytes(stderr, outdata, 16);
+
 
 	    while (crypto_cursor < bytes_read){
 		
-		int size = min(crypto_buff_len, bytes_read-offset);
-		pass_to_enc_thread(outdata+crypto_cursor, 
-				   outdata+crypto_cursor, 
+		int size = min(crypto_buff_len, bytes_read-crypto_cursor);
+		pass_to_enc_thread(outdata+crypto_cursor+offset, 
+				   outdata+crypto_cursor+offset, 
 				   size, my_args->crypt);
 		
 		crypto_cursor += size;
@@ -165,10 +170,10 @@ void *handle_to_udt(void *threadarg) {
 	    }
 
 	    join_all_encryption_threads(my_args->crypt);
+	    bytes_read += offset;
+	    if (DEBUG){
 
-	    // fprintf(stderr, "%d%d not encrypt [%d] %d ", c++, my_args->crypt->get_thread_id(), 
-	    	    // getpid(), bytes_read);
-	    // print_bytes(stderr, outdata, 16);
+	    }
 
 	}
 
@@ -211,7 +216,7 @@ void *udt_to_handle(void *threadarg) {
     struct thread_data *my_args = (struct thread_data *) threadarg;
     FILE* logfile;
 
-    int crypto_buff_len = max_block_size/N_CRYPTO_THREADS + 1;
+    int crypto_buff_len = max_block_size/N_CRYPTO_THREADS;
 
     int offset;
     if (my_args->crypt)
@@ -322,7 +327,7 @@ void *udt_to_handle(void *threadarg) {
 		    fprintf(stderr, "%d%d decrypt [%d] %d \n", c++, 
 			    my_args->crypt->get_thread_id(),
 		    	    getpid(), buffer_cursor);
-		    // print_bytes(stderr, indata, 16);
+		    print_bytes(stderr, indata, 16);
 		}
 
 		written_bytes = write(my_args->fd, indata, block_size);

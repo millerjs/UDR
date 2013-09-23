@@ -23,7 +23,7 @@ and limitations under the License.
 #include "udr_options.h"
 
 /* const int max_block_size = 64*1024; //what should this be? maybe based on UDT buffer size? */
-const int max_block_size = 32768; //what should this be? maybe based on UDT buffer size?
+const int max_block_size = 2*32768; //what should this be? maybe based on UDT buffer size?
 /* const int max_block_size = 67108864; //what should this be? maybe based on UDT buffer size? */
  
 struct thread_data{
