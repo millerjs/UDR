@@ -27,7 +27,8 @@ and limitations under the License.
 /* This needs to be based on the rsync buffer size.  If it's any */
 /* larger, you will see less gains in mt crypt because distribution is */
 /* less even. */
-const int max_block_size = 32768;  
+const int max_block_size = 32768;
+/* const int max_block_size = 33554432/4; */
 
  
 struct thread_data{
