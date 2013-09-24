@@ -18,7 +18,7 @@ and limitations under the License.
 #ifndef CRYPTO_H
 #define CRYPTO_H
 
-#define N_CRYPTO_THREADS 4
+#define N_CRYPTO_THREADS 16
 #define USE_CRYPTO 1
 
 #define PASSPHRASE_SIZE 32
@@ -36,6 +36,7 @@ and limitations under the License.
 #include <limits.h>
 #include <iostream>
 #include <unistd.h>
+#include <semaphore.h>
 
 #define MUTEX_TYPE		pthread_mutex_t
 #define MUTEX_SETUP(x)		pthread_mutex_init(&(x), NULL)
@@ -65,6 +66,8 @@ typedef struct e_thread_args
     int thread_id;
 } e_thread_args;
 
+void *crypto_update_thread(void* _args);
+
 class crypto
 {
     private:
@@ -72,6 +75,8 @@ class crypto
     unsigned char ivec[ 1024 ];
     int direction;
     pthread_mutex_t c_lock[N_CRYPTO_THREADS];
+    pthread_mutex_t thread_ready[N_CRYPTO_THREADS];
+
     pthread_mutex_t id_lock;
 
     int passphrase_size;
@@ -91,8 +96,6 @@ class crypto
     e_thread_args e_args[N_CRYPTO_THREADS];
  
     pthread_t threads[N_CRYPTO_THREADS];
-    int is_thread_valid[N_CRYPTO_THREADS];
-
 
 
 
@@ -169,12 +172,35 @@ class crypto
 	pthread_mutex_init(&id_lock, NULL);
 	for (int i = 0; i < N_CRYPTO_THREADS; i++){
 	    pthread_mutex_init(&c_lock[i], NULL);
+	    pthread_mutex_init(&thread_ready[i], NULL);
+	    pthread_mutex_lock(&thread_ready[i]);
 	}
 
+	// ----------- [ Initialize and set thread detached attribute
+	pthread_attr_t attr;
+	pthread_attr_init(&attr);
+	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+
 	thread_id = 0;
+
 	for (int i = 0; i < N_CRYPTO_THREADS; i++){
-	    is_thread_valid[i] = 0;
+
+	    e_args[i].thread_id = i;
+	    e_args[i].ctx = &ctx[i];
+	    e_args[i].c = this;
+
+	    int ret = pthread_create(&threads[i],
+				 &attr, &crypto_update_thread, 
+				 &e_args[i]);
+    
+	    if (ret){
+		fprintf(stderr, "Unable to create thread: %d\n", ret);
+	    }
+
+
 	}
+	sleep(10);
+
 
     }
 
@@ -194,12 +220,19 @@ class crypto
 	return 1;
     }
 
+    int set_thread_ready(int thread_id){
+	return pthread_mutex_unlock(&thread_ready[thread_id]);
+    }
+
+    int wait_thread_ready(int thread_id){
+	return pthread_mutex_lock(&thread_ready[thread_id]);
+    }
     
-    int lock(int thread_id){
+    int lock_data(int thread_id){
 	return pthread_mutex_lock(&c_lock[thread_id]);
     }
     
-    int unlock(int thread_id){
+    int unlock_data(int thread_id){
 	return pthread_mutex_unlock(&c_lock[thread_id]);
     }
 
@@ -242,7 +275,7 @@ class crypto
 
 
 int crypto_update(char* in, char* data, int len, crypto *c);
-void *crypto_update_thread(void* _args);
+
 int join_all_encryption_threads(crypto *c);
 int pass_to_enc_thread(char* in, char* out, int len, crypto*c);
 
