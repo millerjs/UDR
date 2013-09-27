@@ -414,8 +414,9 @@ int main(int argc, char* argv[]) {
 
       
 	    if (args){
-		fprintf(args, "%s -D %s -s %s -p %s %s scp %s", 
+		fprintf(args, "%s %s -D %s -s %s -p %s %s scp %s", 
 			curr_options.udr_program_src,
+			udr_scp_args1,
 			curr_options.udr_file_dest,
 			curr_options.port_num, 
 			curr_options.key_filename, 

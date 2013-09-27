@@ -18,7 +18,7 @@ and limitations under the License.
 #ifndef CRYPTO_H
 #define CRYPTO_H
 
-#define N_CRYPTO_THREADS 16
+#define N_CRYPTO_THREADS 8
 #define USE_CRYPTO 1
 
 #define PASSPHRASE_SIZE 32
@@ -199,8 +199,6 @@ class crypto
 
 
 	}
-	sleep(10);
-
 
     }
 

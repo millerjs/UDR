@@ -178,9 +178,9 @@ void *handle_to_udt(void *threadarg) {
 
 
 	if(my_args->log){
-	    // fprintf(stderr, "%d%d encrypt [%d] %d ", c++, my_args->crypt->get_thread_id(), 
-		    // getpid(), bytes_read);
-	    // print_bytes(logfile, outdata, bytes_read);
+	    fprintf(logfile, "%d%d encrypt [%d] %d ", c++, my_args->crypt->get_thread_id(), 
+		    getpid(), bytes_read);
+	    print_bytes(logfile, outdata, bytes_read);
 	    fflush(logfile);
 	}
 
