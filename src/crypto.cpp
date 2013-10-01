@@ -208,7 +208,7 @@ int join_all_encryption_threads(crypto *c){
 	return 0;
     }
     
-    for (int i = 0; i < N_CRYPTO_THREADS; i++){
+    for (int i = 0; i < c->get_num_crypto_threads(); i++){
 	c->lock_data(i);
 	c->unlock_data(i);
     }

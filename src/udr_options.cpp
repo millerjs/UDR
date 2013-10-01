@@ -63,6 +63,8 @@ void set_default_udr_options(UDR_Options * options) {
     options->server_config[0] = '\0';
     snprintf(options->server_port, PATH_MAX, "%s", "9000");
 
+    options->n_crypto_threads = 1;
+
     options->rsync_uid = 0;
     options->rsync_gid = 0;
 
@@ -77,10 +79,10 @@ int get_udr_options(UDR_Options * udr_options, int argc, char * argv[], int rsyn
 
     // Extract file destination path
     for (ch = 0; ch < strlen(argv[argc-1]); ch++){
-      if (argv[argc-1][ch]==':'){
-	snprintf(udr_options->udr_file_dest, PATH_MAX, "%s", argv[argc-1]+ch+1);
-	break;
-      }
+	if (argv[argc-1][ch]==':'){
+	    snprintf(udr_options->udr_file_dest, PATH_MAX, "%s", argv[argc-1]+ch+1);
+	    break;
+	}
     }
 
     snprintf(udr_options->udr_program_src, PATH_MAX, "%s", argv[0]);
@@ -108,7 +110,7 @@ int get_udr_options(UDR_Options * udr_options, int argc, char * argv[], int rsyn
 
     int option_index = 0;
 
-    while ((ch = getopt_long(rsync_arg_idx, argv, "D:tlvxa:b:s:h:p:c:k:o:n::", long_options, &option_index)) != -1)
+    while ((ch = getopt_long(rsync_arg_idx, argv, "D:tlvxa:b:s:h:p:c:k:o:n::m:", long_options, &option_index)) != -1)
 
         switch (ch) {
 	case 'a':
@@ -129,15 +131,18 @@ int get_udr_options(UDR_Options * udr_options, int argc, char * argv[], int rsyn
 	    else
     		snprintf(udr_options->encryption_type, PATH_MAX, "%s", "aes-128");
 	    break;
+	case 'm':
+	    udr_options->n_crypto_threads = atoi(optarg);
+	    break;
 	case 's':
 	    udr_options->sflag = 1;
 	    snprintf(udr_options->port_num, NI_MAXSERV, "%s", optarg);
 	    break;
 	case 'l':
-	  snprintf(udr_options->username, PATH_MAX, "%s", optarg);
+	    snprintf(udr_options->username, PATH_MAX, "%s", optarg);
 	    break;
 	case 'p':
-	  snprintf(udr_options->key_filename, PATH_MAX, "%s", optarg);
+	    snprintf(udr_options->key_filename, PATH_MAX, "%s", optarg);
 	    break;
 	case 'c':
 	    snprintf(udr_options->udr_program_dest, PATH_MAX, "%s", optarg);
@@ -149,24 +154,24 @@ int get_udr_options(UDR_Options * udr_options, int argc, char * argv[], int rsyn
 	    udr_options->verbose = true;
 	    break;
 	case 'o':
-	  snprintf(udr_options->server_port, NI_MAXSERV, "%s", optarg);
+	    snprintf(udr_options->server_port, NI_MAXSERV, "%s", optarg);
 	case 'x':
-	  udr_options->server_connect = true;
+	    udr_options->server_connect = true;
 	case 'D':
-	  snprintf(udr_options->udr_file_dest, PATH_MAX, "%s", optarg);
+	    snprintf(udr_options->udr_file_dest, PATH_MAX, "%s", optarg);
 	case 0:
 	    if (strcmp("version", long_options[option_index].name) == 0) {
-		  udr_options->version_flag = true;
+		udr_options->version_flag = true;
 	    }
-        else if (strcmp("config", long_options[option_index].name) == 0){
-            snprintf(udr_options->server_config, PATH_MAX, "%s", optarg);
-        }
-        else if (strcmp("rsync-uid", long_options[option_index].name) == 0){
-            udr_options->rsync_uid = atoi(optarg);
-        }
-        else if (strcmp("rsync-gid", long_options[option_index].name) == 0){
-            udr_options->rsync_gid = atoi(optarg);
-        }
+	    else if (strcmp("config", long_options[option_index].name) == 0){
+		snprintf(udr_options->server_config, PATH_MAX, "%s", optarg);
+	    }
+	    else if (strcmp("rsync-uid", long_options[option_index].name) == 0){
+		udr_options->rsync_uid = atoi(optarg);
+	    }
+	    else if (strcmp("rsync-gid", long_options[option_index].name) == 0){
+		udr_options->rsync_gid = atoi(optarg);
+	    }
 	    break;
 	default:
 	    fprintf(stderr, "Illegal argument: %c\n", ch);
@@ -221,9 +226,9 @@ void parse_host_username(char * source, char * username, char * host, bool * dou
 
     //probably should check lengths here?
     if (at_loc != NULL){
-//        fprintf(stderr, "at_loc: %d\n", at_loc);
+	//        fprintf(stderr, "at_loc: %d\n", at_loc);
         host_len = colon_loc - at_loc;
-//        fprintf(stderr, "host_len: %d\n", host_len);
+	//        fprintf(stderr, "host_len: %d\n", host_len);
 
         //for now just set to PATH_MAX if greater -- but perhaps should throw an error? really shouldn't happen unless something bad is happening.
         if(host_len > PATH_MAX)
@@ -231,9 +236,9 @@ void parse_host_username(char * source, char * username, char * host, bool * dou
 
         strncpy(host, at_loc+1, host_len-1);
         host[host_len-1] = '\0';
-//        fprintf(stderr, "host_len: %d host: %s\n", host_len, host);
+	//        fprintf(stderr, "host_len: %d host: %s\n", host_len, host);
 
-//        fprintf(stderr, "at_loc is not null\n");
+	//        fprintf(stderr, "at_loc is not null\n");
         username_len = at_loc - source + 1;
 
         if(username_len > PATH_MAX)
@@ -242,7 +247,7 @@ void parse_host_username(char * source, char * username, char * host, bool * dou
         strncpy(username, source, username_len-1);
         username[username_len-1] = '\0';
 
-//        fprintf(stderr, "username_len: %d username: %s\n", username_len, username);
+	//        fprintf(stderr, "username_len: %d username: %s\n", username_len, username);
 
     }
     else{
@@ -252,7 +257,7 @@ void parse_host_username(char * source, char * username, char * host, bool * dou
 
         strncpy(host, source, host_len-1);
         host[host_len-1] = '\0';
-//        fprintf(stderr, "host_len: %d host: %s\n", host_len, host);;
+	//        fprintf(stderr, "host_len: %d host: %s\n", host_len, host);;
     }
 
 
@@ -289,17 +294,17 @@ void get_host_username(UDR_Options * udr_options, int argc, char *argv[], int rs
     //go backwards until find first option, we'll call those the source
     int src_num = 0;
     for(int i = argc-2; i > rsync_arg_idx; i--){
-//        fprintf(stderr, "i: %d argv: %s\n", i, argv[i]);
+	//        fprintf(stderr, "i: %d argv: %s\n", i, argv[i]);
         if(argv[i][0] == '-'){
             break;
         }
         else{
-//            fprintf(stderr, "parsing: %s\n", argv[i]);
-//            fprintf(stderr, "src username: %s\n", src_username );
-//            fprintf(stderr, "src host: %s\n", src_host);
+	    //            fprintf(stderr, "parsing: %s\n", argv[i]);
+	    //            fprintf(stderr, "src username: %s\n", src_username );
+	    //            fprintf(stderr, "src host: %s\n", src_host);
             parse_host_username(argv[i], next_src_username, next_src_host, &next_src_double_colon);
-//            fprintf(stderr, "next src username: %s\n", next_src_username );
-//            fprintf(stderr, "next src host: %s\n", next_src_host);
+	    //            fprintf(stderr, "next src username: %s\n", next_src_username );
+	    //            fprintf(stderr, "next src host: %s\n", next_src_host);
             if(src_num != 0){
                 if(strcmp(src_username,next_src_username) != 0 || strcmp(src_host,next_src_host) != 0 || src_double_colon != next_src_double_colon){
                     //have a problem
@@ -318,22 +323,22 @@ void get_host_username(UDR_Options * udr_options, int argc, char *argv[], int rs
     }
 
 
-//    fprintf(stderr, "src_username: %s src_host: %s\n", src_username, src_host);
+    //    fprintf(stderr, "src_username: %s src_host: %s\n", src_username, src_host);
 
     if(strlen(src_host) == 0){
         src_remote = false;
     }
 
-//    fprintf(stderr, "dest: %s\n", dest);
+    //    fprintf(stderr, "dest: %s\n", dest);
     parse_host_username(dest, dest_username, dest_host, &dest_double_colon);
 
-//    fprintf(stderr, "dest_username: %s dest_host: %s\n", dest_username, dest_host);
+    //    fprintf(stderr, "dest_username: %s dest_host: %s\n", dest_username, dest_host);
 
     if(strlen(dest_host) == 0){
         dest_remote = false;
     }
 
-//    fprintf(stderr, "src_remote: %d dest_remote: %d\n", src_remote, dest_remote);
+    //    fprintf(stderr, "src_remote: %d dest_remote: %d\n", src_remote, dest_remote);
 
     if(src_remote == dest_remote){
         fprintf(stderr, "UDR ERROR: UDR only does remote -> local or local -> remote transfers\n");

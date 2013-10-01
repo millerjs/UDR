@@ -101,7 +101,7 @@ void *handle_to_udt(void *threadarg) {
     char outdata[max_block_size+sizeof(int)];
     FILE*  logfile;
 
-    int crypto_buff_len = max_block_size/N_CRYPTO_THREADS+1;
+    int crypto_buff_len = max_block_size/my_args->crypt->get_num_crypto_threads()+1;
 
     int offset;
     if (my_args->crypt)
@@ -214,7 +214,7 @@ void *udt_to_handle(void *threadarg) {
     struct thread_data *my_args = (struct thread_data *) threadarg;
     FILE* logfile;
 
-    int crypto_buff_len = max_block_size/N_CRYPTO_THREADS+1;
+    int crypto_buff_len = max_block_size/my_args->crypt->get_num_crypto_threads()+1;
 
     int offset;
     if (my_args->crypt)
@@ -441,9 +441,9 @@ int run_sender(UDR_Options * udr_options, unsigned char * passphrase, const char
 
     if(udr_options->encryption){
 	crypto encrypt(EVP_ENCRYPT, PASSPHRASE_SIZE, (unsigned char *) passphrase,
-		       udr_options->encryption_type);
+		       udr_options->encryption_type, udr_options->n_crypto_threads);
 	crypto decrypt(EVP_DECRYPT, PASSPHRASE_SIZE, (unsigned char *) passphrase,
-		       udr_options->encryption_type);
+		       udr_options->encryption_type, udr_options->n_crypto_threads);
 	// free_key(passphrase);
 	sender_to_udt.crypt = &encrypt;
 	udt_to_sender.crypt = &decrypt;
@@ -655,9 +655,9 @@ int run_receiver(UDR_Options * udr_options) {
 
     if(udr_options->encryption){
 	crypto encrypt(EVP_ENCRYPT, PASSPHRASE_SIZE, rand_pp,
-		       udr_options->encryption_type);
+		       udr_options->encryption_type, udr_options->n_crypto_threads);
 	crypto decrypt(EVP_DECRYPT, PASSPHRASE_SIZE, rand_pp,
-		       udr_options->encryption_type);
+		       udr_options->encryption_type, udr_options->n_crypto_threads);
 	recv_to_udt.crypt = &encrypt;
 	udt_to_recv.crypt = &decrypt;
     }

@@ -18,7 +18,7 @@ and limitations under the License.
 #ifndef CRYPTO_H
 #define CRYPTO_H
 
-#define N_CRYPTO_THREADS 8
+#define MAX_CRYPTO_THREADS 32
 #define USE_CRYPTO 1
 
 #define PASSPHRASE_SIZE 32
@@ -70,17 +70,19 @@ void *crypto_update_thread(void* _args);
 
 class crypto
 {
-    private:
+ private:
     //BF_KEY key;
     unsigned char ivec[ 1024 ];
     int direction;
-    pthread_mutex_t c_lock[N_CRYPTO_THREADS];
-    pthread_mutex_t thread_ready[N_CRYPTO_THREADS];
+    pthread_mutex_t c_lock[MAX_CRYPTO_THREADS];
+    pthread_mutex_t thread_ready[MAX_CRYPTO_THREADS];
 
     pthread_mutex_t id_lock;
 
     int passphrase_size;
     int hex_passphrase_size;
+
+    int N_CRYPTO_THREADS;
 
     int thread_id;
 
@@ -91,17 +93,19 @@ class crypto
        
     // EVP stuff
 
-    EVP_CIPHER_CTX ctx[N_CRYPTO_THREADS];
+    EVP_CIPHER_CTX ctx[MAX_CRYPTO_THREADS];
 
-    e_thread_args e_args[N_CRYPTO_THREADS];
+    e_thread_args e_args[MAX_CRYPTO_THREADS];
  
-    pthread_t threads[N_CRYPTO_THREADS];
+    pthread_t threads[MAX_CRYPTO_THREADS];
 
 
 
-    crypto(int direc, int len, unsigned char* password, char *encryption_type)
+    crypto(int direc, int len, unsigned char* password, char *encryption_type, int n_threads)
     {
 	
+	N_CRYPTO_THREADS = n_threads;
+
 	THREAD_setup();
 	 //free_key( password ); can't free here because is reused by threads
         const EVP_CIPHER *cipher;
@@ -200,6 +204,10 @@ class crypto
 
 	}
 
+    }
+
+    int get_num_crypto_threads(){
+	return N_CRYPTO_THREADS;
     }
 
     int get_thread_id(){
