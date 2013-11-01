@@ -101,13 +101,16 @@ void *handle_to_udt(void *threadarg) {
     char outdata[max_block_size+sizeof(int)];
     FILE*  logfile;
 
-    int crypto_buff_len = max_block_size/my_args->crypt->get_num_crypto_threads()+1;
+    int crypto_buff_len;
 
     int offset;
-    if (my_args->crypt)
+    if (my_args->crypt){
+	crypto_buff_len = max_block_size/my_args->crypt->get_num_crypto_threads()+1;
 	offset = sizeof(int)/sizeof(char);
-    else 
+    } else { 
 	offset = 0;
+    }
+
 
     if(my_args->log) {
 	string filename = my_args->logfile_dir + convert_int(my_args->id) + "_log.txt";
@@ -147,7 +150,7 @@ void *handle_to_udt(void *threadarg) {
 	    return NULL;
 	}
 	
-
+	// begin encryption
 	if(my_args->crypt != NULL){
 
 	    *((int*)outdata) = bytes_read;
@@ -174,20 +177,22 @@ void *handle_to_udt(void *threadarg) {
 	    join_all_encryption_threads(my_args->crypt);
 	    bytes_read += offset;
 
+
+	    if(my_args->log){
+		fprintf(logfile, "%d%d encrypt [%d] %d ", c++, 
+			my_args->crypt->get_thread_id(), 
+			getpid(), bytes_read);
+		print_bytes(logfile, outdata, bytes_read);
+		fflush(logfile);
+	    }
+
 	}
 
-
-	if(my_args->log){
-	    fprintf(logfile, "%d%d encrypt [%d] %d ", c++, my_args->crypt->get_thread_id(), 
-		    getpid(), bytes_read);
-	    print_bytes(logfile, outdata, bytes_read);
-	    fflush(logfile);
-	}
+	// end encryption
 
 	int ssize = 0;
 	while(ssize < bytes_read) {
 		    
-	    
 	    if (UDT::ERROR == (ss = UDT::send(*my_args->udt_socket, outdata + ssize, 
 					      bytes_read - ssize, 0))) {
 		
@@ -214,13 +219,15 @@ void *udt_to_handle(void *threadarg) {
     struct thread_data *my_args = (struct thread_data *) threadarg;
     FILE* logfile;
 
-    int crypto_buff_len = max_block_size/my_args->crypt->get_num_crypto_threads()+1;
+    int crypto_buff_len;
 
     int offset;
-    if (my_args->crypt)
+    if (my_args->crypt){
+	crypto_buff_len = max_block_size/my_args->crypt->get_num_crypto_threads()+1;
 	offset = sizeof(int)/sizeof(char);
-    else
+    } else {
 	offset = 0;
+    }
 
     char indata[max_block_size+offset];
     char outdata[max_block_size+offset];

@@ -19,8 +19,6 @@ YYY: [IA32(default), POWERPC, IA64, AMD64]
 OpenSSL (libssl and libcrypto)  
 Currently, UDR has mainly been tested on Linux so your mileage may vary on another OS. UDT has been well tested on all of the provided options.
 
-USAGE
-------
 UDR must be on the client and server machines that data will be transferred between. UDR uses ssh to do authentication and automatically start the server-side UDR process. At least one UDP port needs to be open between the machines, by default UDR starts with port 9000 and looks for an open port up to 9100, changing this is an option. Encryption is off by default. When turned on encryption uses OpenSSL with aes-128 by default.
 
 ### Basic usage:
