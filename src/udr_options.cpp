@@ -14,7 +14,7 @@ software distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions
 and limitations under the License.
-**********************[*******************************************************/
+*****************************************************************************/
 
 #include <unistd.h>
 #include <cstdlib>
@@ -29,7 +29,7 @@ and limitations under the License.
 using namespace std;
 
 void usage() {
-    fprintf(stderr, "usage: udr [-n aes-128 | aes-192 | aes-256 | bf | des-ede3] [-v] [-a starting port number] [-b ending port number] [-c remote udr location] rsync [rsync options]\n");
+    fprintf(stderr, "usage: udr [-n aes-128 | aes-192 | aes-256 | bf | des-ede3] [-v] [-d timeout] [-a starting port number] [-b ending port number] [-c remote udr location] rsync [rsync options]\n");
     exit(1);
 }
 
@@ -97,10 +97,13 @@ int get_udr_options(UDR_Options * udr_options, int argc, char * argv[], int rsyn
 
     int option_index = 0;
 
-    while ((ch = getopt_long(rsync_arg_idx, argv, "tlvxa:b:s:h:p:c:k:o:n::", long_options, &option_index)) != -1)
+    while ((ch = getopt_long(rsync_arg_idx, argv, "tlvxa:b:s:d:h:p:c:k:o:n::", long_options, &option_index)) != -1)
         switch (ch) {
 	case 'a':
 	    udr_options->start_port = atoi(optarg);
+	    break;
+	case 'd':
+	    udr_options->timeout = atoi(optarg);
 	    break;
 	case 'b':
 	    udr_options->end_port = atoi(optarg);
@@ -158,6 +161,12 @@ int get_udr_options(UDR_Options * udr_options, int argc, char * argv[], int rsyn
 	    fprintf(stderr, "Illegal argument: %c\n", ch);
 	    usage();
         }
+
+    // verify that timeout duration > 0
+    if (udr_options->timeout < 1){
+	fprintf(stderr, "Please specify a timeout duration [-d timeout] greater than 0s.\n");
+	exit(1);
+    }
 
     //Finish setting up the key file path
     if (key_dir == NULL) {

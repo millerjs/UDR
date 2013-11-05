@@ -29,6 +29,11 @@ and limitations under the License.
 #include "udr_util.h"
 #include "udr_threads.h"
 
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <sys/select.h>
+
 using std::string;
 
 int ppid_poll = 5;
@@ -36,6 +41,40 @@ bool thread_log = false;
 
 //for debugging
 string local_logfile_dir = "../log";
+
+// Ever TRANSFER_TIMEOUT interval, check to see if data has been exchanged
+// if timeout_sem = 1 then data has been exchanged
+// if timeout_sem = 2 then data has not been exchanged but
+//     the connection has not been established so don't exit
+int timeout_sem;
+void *monitor_timeout(void* _arg) {
+
+    timeout_mon_args *args = (timeout_mon_args*) _arg;
+    FILE* logfile = args->logfile;
+
+    while (1){
+
+	sleep(args->timeout);
+
+	if (timeout_sem == 0){
+
+	    if(logfile){
+	    	fprintf(logfile, "Data transfer timeout. Exiting\n");
+	    	fclose(logfile);
+	    }
+	    exit(1);
+
+	} else {
+	    // continue on as normal
+	}
+
+	// If timeout_sem == 2, the connection has not been made -> no timeout next round
+	if (timeout_sem != 2)
+	    timeout_sem = 0;
+
+    }
+}
+
 
 void print_bytes(FILE* file, const void *object, size_t size) {
     size_t i;
@@ -83,6 +122,9 @@ void sigexit(int signum) {
     exit(EXIT_SUCCESS);
 }    /* Exit successfully */
 
+
+
+
 void *handle_to_udt(void *threadarg) {
     signal(SIGUSR1,sigexit);
 
@@ -98,7 +140,6 @@ void *handle_to_udt(void *threadarg) {
     //struct timeval tv;
     //fd_set readfds;
     int bytes_read;
-
     while(true) {
 	int ss;
 
@@ -106,12 +147,15 @@ void *handle_to_udt(void *threadarg) {
 	    fprintf(logfile, "%d: Should be reading from process...\n", my_args->id);
 	    fflush(logfile);
 	}
-
-	//using select because only checking stdin and is more portable
+	
 	if(my_args->crypt != NULL)
 	    bytes_read = read(my_args->fd, indata, max_block_size);
 	else
 	    bytes_read = read(my_args->fd, outdata, max_block_size);
+
+	timeout_sem = 1;
+
+
 
 	if(bytes_read < 0){
 	    if(my_args->log){
@@ -197,6 +241,7 @@ void *udt_to_handle(void *threadarg) {
 	else {
 	    written_bytes = write(my_args->fd, indata, rs);
 	}
+	timeout_sem = 1;
 
 	if(my_args->log) {
 	    fprintf(logfile, "%d recv on socket %d rs: %d written bytes: %d\n", my_args->id, *my_args->udt_socket, rs, written_bytes);
@@ -505,6 +550,21 @@ int run_receiver(UDR_Options * udr_options) {
 
     pthread_t udt_to_recv_thread;
     pthread_create(&udt_to_recv_thread, NULL, udt_to_handle, (void*)&udt_to_recv);
+
+
+    timeout_sem = 2;
+    pthread_t counter_thread;
+    FILE* timeout_log = NULL;
+    timeout_mon_args timeout_args;
+    timeout_args.logfile = timeout_log;
+    timeout_args.timeout = udr_options->timeout;
+
+    if(thread_log) {
+	string filename = local_logfile_dir + "timeout_monitor_log.txt";
+	timeout_log = fopen(filename.c_str(), "w");
+    }
+    pthread_create(&counter_thread, NULL, &monitor_timeout, &timeout_args);
+
 
     if(udr_options->verbose){
 	fprintf(stderr, "[udr receiver] waiting to join on recv_to_udt_thread\n");

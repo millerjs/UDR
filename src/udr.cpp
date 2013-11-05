@@ -49,6 +49,8 @@ char * get_udr_cmd(UDR_Options * udr_options) {
     else
         udr_args[0] = '\0';
 
+    sprintf(udr_args, " -d%d ", udr_options->timeout);
+
     if (udr_options->verbose)
         strcat(udr_args, "-v");
 
@@ -162,7 +164,7 @@ int main(int argc, char* argv[]) {
         //get the host and username first
         get_host_username(&curr_options, argc, argv, rsync_arg_idx);
 
-	    char * udr_cmd = get_udr_cmd(&curr_options);
+	char * udr_cmd = get_udr_cmd(&curr_options);
         if (curr_options.verbose){
             fprintf(stderr, "%s udr_cmd %s\n", curr_options.which_process, udr_cmd);
         }
@@ -197,9 +199,10 @@ int main(int argc, char* argv[]) {
 
             char ** ssh_argv;
             ssh_argv = (char**) malloc(sizeof (char *) * ssh_argc);
-
             int ssh_idx = 0;
+
             ssh_argv[ssh_idx++] = curr_options.ssh_program;
+
             if (strlen(curr_options.username) != 0) {
                 ssh_argv[ssh_idx++] = "-l";
                 ssh_argv[ssh_idx++] = curr_options.username;
