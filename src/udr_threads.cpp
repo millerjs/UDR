@@ -393,7 +393,7 @@ int run_receiver(UDR_Options * udr_options) {
 
     bool bad_port = false;
 
-    for(int port_num = udr_options->start_port; port_num < udr_options->end_port; port_num++) {
+    for(int port_num = udr_options->start_port; port_num <= udr_options->end_port; port_num++) {
 	bad_port = false;
 	snprintf(receiver_port, sizeof(receiver_port), "%d", port_num);
 
