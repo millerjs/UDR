@@ -393,6 +393,11 @@ int run_receiver(UDR_Options * udr_options) {
 
     bool bad_port = false;
 
+    if(udr_options->start_port > udr_options->end_port){
+	fprintf(stderr, "[udr receiver] ERROR: invalid port range %d - %d\n", udr_options->start_port, udr_options->end_port);
+	return 0;
+    }
+
     for(int port_num = udr_options->start_port; port_num <= udr_options->end_port; port_num++) {
 	bad_port = false;
 	snprintf(receiver_port, sizeof(receiver_port), "%d", port_num);
