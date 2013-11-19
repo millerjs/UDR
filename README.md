@@ -76,6 +76,7 @@ The UDR server requires a configuration file, by default it looks for /etc/udrd.
 - rsyncd conf: rsyncd.conf file to use for the rsync part of the configuration
 - uid: user name or uid that the server should run as when started as root, default is nobody when run as root
 - gid: group name or gid that the server should run as when started as root, default is nogroup when run as root 
+- specify ip: IP address for udr receiver to bind to, default is any connected interface
 
 Most standard rsyncd.conf options should work like normal. Known exceptions are:
 
