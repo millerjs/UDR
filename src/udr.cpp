@@ -54,7 +54,13 @@ char * get_udr_cmd(UDR_Options * udr_options) {
     if (udr_options->verbose)
         strcat(udr_args, "-v");
 
-    if(udr_options->server_connect) {
+    if (udr_options->specify_ip){
+	char specify_ip_arg[PATH_MAX];
+	sprintf(specify_ip_arg, " -i%s", udr_options->specify_ip);
+	strcat(udr_args, specify_ip_arg);
+    }
+
+    if (udr_options->server_connect) {
         sprintf(udr_args, "%s %s", udr_args, "-t rsync");
     }
     else {
@@ -63,7 +69,7 @@ char * get_udr_cmd(UDR_Options * udr_options) {
 
     char* udr_cmd = (char *) malloc(strlen(udr_options->udr_program_dest) + strlen(udr_args) + 3);
     sprintf(udr_cmd, "%s %s\n", udr_options->udr_program_dest, udr_args);
-
+    
     return udr_cmd;
 }
 
@@ -96,7 +102,7 @@ int main(int argc, char* argv[]) {
     struct UDR_Options curr_options;
 
     get_udr_options(&curr_options, argc, argv, rsync_arg_idx);
-
+    
     if (curr_options.version_flag)
         print_version();
 

@@ -57,6 +57,8 @@ struct UDR_Options{
 
     char encryption_type[PATH_MAX+1];
 
+    char *specify_ip;
+
     uid_t rsync_uid;
     gid_t rsync_gid;
 

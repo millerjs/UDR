@@ -62,6 +62,7 @@ void set_default_udr_options(UDR_Options * options) {
     options->server_config[0] = '\0';
     snprintf(options->server_port, PATH_MAX, "%s", "9000");
 
+    options->specify_ip = NULL;
 
     options->rsync_uid = 0;
     options->rsync_gid = 0;
@@ -97,7 +98,7 @@ int get_udr_options(UDR_Options * udr_options, int argc, char * argv[], int rsyn
 
     int option_index = 0;
 
-    while ((ch = getopt_long(rsync_arg_idx, argv, "tlvxa:b:s:d:h:p:c:k:o:n::", long_options, &option_index)) != -1)
+    while ((ch = getopt_long(rsync_arg_idx, argv, "i:tlvxa:b:s:d:h:p:c:k:o:n::", long_options, &option_index)) != -1)
         switch (ch) {
 	case 'a':
 	    udr_options->start_port = atoi(optarg);
@@ -140,6 +141,11 @@ int get_udr_options(UDR_Options * udr_options, int argc, char * argv[], int rsyn
 	    udr_options->verbose = true;
 	    break;
 	case 'o':
+
+	case 'i':
+	    udr_options->specify_ip = strdup(optarg);
+	    break;
+
         snprintf(udr_options->server_port, NI_MAXSERV, "%s", optarg);
     case 'x':
         udr_options->server_connect = true;

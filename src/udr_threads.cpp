@@ -29,6 +29,8 @@ and limitations under the License.
 #include "udr_util.h"
 #include "udr_threads.h"
 
+#include <arpa/inet.h>
+
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -266,7 +268,6 @@ int run_sender(UDR_Options * udr_options, unsigned char * passphrase, const char
     struct addrinfo hints, *local, *peer;
 
     memset(&hints, 0, sizeof(struct addrinfo));
-
     hints.ai_flags = AI_PASSIVE;
     hints.ai_family = AF_INET;
     hints.ai_socktype = SOCK_STREAM;
@@ -382,8 +383,15 @@ int run_receiver(UDR_Options * udr_options) {
     addrinfo hints;
     addrinfo* res;
 
-    memset(&hints, 0, sizeof(struct addrinfo));
+    struct sockaddr_in my_addr;
 
+    // switch to turn on ip specification or not
+    int specify_ip = !!(udr_options->specify_ip);
+
+    if (udr_options->verbose && specify_ip)
+	fprintf(stderr, "Specifying on specific ip: %s\n", udr_options->specify_ip);
+
+    memset(&hints, 0, sizeof(struct addrinfo));
     hints.ai_flags = AI_PASSIVE;
     hints.ai_family = AF_INET;
     hints.ai_socktype = SOCK_STREAM;
@@ -406,8 +414,24 @@ int run_receiver(UDR_Options * udr_options) {
 	    bad_port = true;
 	}
 	else {
+
 	    serv = UDT::socket(res->ai_family, res->ai_socktype, res->ai_protocol);
-	    if (UDT::ERROR == UDT::bind(serv, res->ai_addr, res->ai_addrlen)) {
+
+	    int r;
+
+	    if (specify_ip){ 
+
+		my_addr.sin_family = AF_INET;     
+		my_addr.sin_port = htons(port_num); 
+		my_addr.sin_addr.s_addr = inet_addr(udr_options->specify_ip);
+		bzero(&(my_addr.sin_zero), 8);    
+
+		r = UDT::bind(serv, (struct sockaddr *)&my_addr, sizeof(struct sockaddr));
+	    } else {
+		r = UDT::bind(serv, res->ai_addr, res->ai_addrlen);
+	    }
+
+	    if (UDT::ERROR == r){
 		bad_port = true;
 	    }
 	}
