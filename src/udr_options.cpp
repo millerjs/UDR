@@ -141,12 +141,13 @@ int get_udr_options(UDR_Options * udr_options, int argc, char * argv[], int rsyn
 	    udr_options->verbose = true;
 	    break;
 	case 'o':
+	    snprintf(udr_options->server_port, NI_MAXSERV, "%s", optarg);
+	    break;
 
 	case 'i':
 	    udr_options->specify_ip = strdup(optarg);
 	    break;
 
-        snprintf(udr_options->server_port, NI_MAXSERV, "%s", optarg);
     case 'x':
         udr_options->server_connect = true;
 	case 0:
