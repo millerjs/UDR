@@ -36,7 +36,7 @@ UDR must be on the client and server machines that data will be transferred betw
 [-v] verbose mode, typically for debugging purposes  
 [--version] print out the version  
 [-d timeout] specify duration in seconds in which to kill remaining threads if no data is transfered after connected, default is 15s
-
+[-i ip] specify the interface by ip that the remote process will bind to
 
 The rsync [rsync options] should take any of the standard rsync options, except the -e/--rsh flag which how UDR interfaces with rsync.
 
