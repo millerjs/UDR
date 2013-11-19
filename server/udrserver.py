@@ -33,6 +33,9 @@ class UDRHandler(SocketServer.StreamRequestHandler):
         #perhaps should add a timeout, or maybe none at all 
         line = self.rfile.readline().strip()
 
+# hllo
+        # print self.server.params
+
         if not line:
             logging.warning('Connection problem, did not receive udr command from client')
         else:
@@ -41,6 +44,9 @@ class UDRHandler(SocketServer.StreamRequestHandler):
             udr_cmd.append('-x')
             udr_cmd.append('--config')
             udr_cmd.append(self.server.params['rsyncd conf'])
+            
+            if self.server.params['specify ip']:
+                udr_cmd.append('-i%s' % self.server.params['specify ip'])
 
             if self.server.params['verbose']:
                 udr_cmd.append('-v')
@@ -96,6 +102,7 @@ class UDRServer(Daemon, object):
         self.params['rsyncd conf'] = '/etc/rsyncd.conf'
         self.params['pid file'] = '/var/run/udrd.pid'
         self.params['log file'] = ''.join([os.getcwd(), '/udr.log'])
+        self.params['specify ip'] = None
         self.parse_conf(configfile, self.params)
 
         #check that rsyncd.conf exists, otherwise rsync fails silently
