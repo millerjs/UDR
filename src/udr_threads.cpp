@@ -60,7 +60,7 @@ void *monitor_timeout(void* _arg) {
 
 	if (timeout_sem == 0){
 
-	    if(logfile){
+	    if (logfile) {
 	    	fprintf(logfile, "Data transfer timeout. Exiting\n");
 	    	fclose(logfile);
 	    }
@@ -149,7 +149,7 @@ void *handle_to_udt(void *threadarg) {
 	    fprintf(logfile, "%d: Should be reading from process...\n", my_args->id);
 	    fflush(logfile);
 	}
-	
+
 	if(my_args->crypt != NULL)
 	    bytes_read = read(my_args->fd, indata, max_block_size);
 	else
@@ -419,12 +419,12 @@ int run_receiver(UDR_Options * udr_options) {
 
 	    int r;
 
-	    if (specify_ip){ 
+	    if (specify_ip){
 
-		my_addr.sin_family = AF_INET;     
-		my_addr.sin_port = htons(port_num); 
+		my_addr.sin_family = AF_INET;
+		my_addr.sin_port = htons(port_num);
 		my_addr.sin_addr.s_addr = inet_addr(udr_options->specify_ip);
-		bzero(&(my_addr.sin_zero), 8);    
+		bzero(&(my_addr.sin_zero), 8);
 
 		r = UDT::bind(serv, (struct sockaddr *)&my_addr, sizeof(struct sockaddr));
 	    } else {

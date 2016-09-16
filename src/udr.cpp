@@ -71,7 +71,7 @@ char * get_udr_cmd(UDR_Options * udr_options) {
 
     char* udr_cmd = (char *) malloc(strlen(udr_options->udr_program_dest) + strlen(udr_args) + 3);
     sprintf(udr_cmd, "%s %s\n", udr_options->udr_program_dest, udr_args);
-    
+
     return udr_cmd;
 }
 
@@ -104,7 +104,7 @@ int main(int argc, char* argv[]) {
     struct UDR_Options curr_options;
 
     get_udr_options(&curr_options, argc, argv, rsync_arg_idx);
-    
+
     if (curr_options.version_flag)
         print_version();
 
@@ -196,14 +196,15 @@ int main(int argc, char* argv[]) {
         }
         /* If not try ssh */
         else {
+            char ssh_port_str[15];
             int sshchild_to_parent, sshparent_to_child;
             int nbytes;
 
             int ssh_argc;
             if (strlen(curr_options.username) != 0)
-                ssh_argc = 6;
+                ssh_argc = 8;
             else
-                ssh_argc = 5;
+                ssh_argc = 7;
 
             char ** ssh_argv;
             ssh_argv = (char**) malloc(sizeof (char *) * ssh_argc);
@@ -211,10 +212,16 @@ int main(int argc, char* argv[]) {
 
             ssh_argv[ssh_idx++] = curr_options.ssh_program;
 
+            // Add ssh port
+            sprintf(ssh_port_str, "%d", curr_options.ssh_port);
+            ssh_argv[ssh_idx++] = "-p";
+            ssh_argv[ssh_idx++] = ssh_port_str;
+
             if (strlen(curr_options.username) != 0) {
                 ssh_argv[ssh_idx++] = "-l";
                 ssh_argv[ssh_idx++] = curr_options.username;
             }
+
             ssh_argv[ssh_idx++] = curr_options.host;
             ssh_argv[ssh_idx++] = udr_cmd;
             ssh_argv[ssh_idx++] = NULL;

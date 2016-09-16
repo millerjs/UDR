@@ -22,6 +22,8 @@ udt/app/recvfile
 udt/app/sendfile
 udt/app/test
 udt/src/udt
+udt/app/udcat_client
+udt/app/udcat_server
 
 #server
 *.pyc
@@ -37,5 +39,30 @@ server/.venv2.6
 # Emacs files
 *~
 
-# Vim files 
+# Vim files
 *.swp
+
+# Python
+*.cache
+__pycache__/
+*.py[cod]
+.Python
+env/
+venv/
+.venv/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Misc
+*.log

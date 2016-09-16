@@ -23,6 +23,8 @@ and limitations under the License.
 #include <limits.h>
 
 struct UDR_Options{
+    // The port UDR will attempt the initial SSH connection over
+    int ssh_port;
     int start_port;
     int end_port;
     int timeout;
@@ -31,7 +33,6 @@ struct UDR_Options{
     bool sflag;
     bool verbose;
     bool encryption;
-    //bool server;
     bool version_flag;
     bool server_connect;
 
