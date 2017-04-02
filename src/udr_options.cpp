@@ -29,11 +29,19 @@ and limitations under the License.
 using namespace std;
 
 void usage() {
-    fprintf(stderr, "usage: udr [-n aes-128 | aes-192 | aes-256 | bf | des-ede3] [-v] [-d timeout] [-a starting port number] [-b ending port number] [-c remote udr location] rsync [rsync options]\n");
+    fprintf(stderr, "usage: udr [UDR options] rsync [rsync options]\n\n");
+    fprintf(stderr, "UDR options:\n");
+    fprintf(stderr, "\t[-n aes-128 | aes-192 | aes-256 | bf | des-ede3] Encryption cypher\n");
+    fprintf(stderr, "\t[-v] Run UDR with verbosity\n");
+    fprintf(stderr, "\t[-d timeout] Data transfer timeout in seconds\n");
+    fprintf(stderr, "\t[-a port] Local UDT port\n");
+    fprintf(stderr, "\t[-b port] Remote UDT port\n");
+    fprintf(stderr, "\t[-c path] Remote UDR executable\n");
     exit(1);
 }
 
 void set_default_udr_options(UDR_Options * options) {
+    options->ssh_port = 22;
     options->start_port = 9000;
     options->end_port = 9100;
     options->timeout = 15;
@@ -42,7 +50,6 @@ void set_default_udr_options(UDR_Options * options) {
     options->sflag = false;
     options->verbose = false;
     options->encryption = false;
-    //options->server = false;
     options->version_flag = false;
     options->server_connect = false;
 
@@ -79,6 +86,7 @@ int get_udr_options(UDR_Options * udr_options, int argc, char * argv[], int rsyn
     static struct option long_options[] = {
         {"verbose", no_argument, NULL, 'v'},
         {"version", no_argument, NULL, 0},
+        {"ssh-port", optional_argument, NULL, 'P'},
         {"start-port", required_argument, NULL, 'a'},
         {"end-port", required_argument, NULL, 'b'},
         {"receiver", no_argument, NULL, 't'},
@@ -98,76 +106,81 @@ int get_udr_options(UDR_Options * udr_options, int argc, char * argv[], int rsyn
 
     int option_index = 0;
 
-    while ((ch = getopt_long(rsync_arg_idx, argv, "i:tlvxa:b:s:d:h:p:c:k:o:n::", long_options, &option_index)) != -1)
+    const char* opts = "P:i:tlvxa:b:s:d:h:p:c:k:o:n::";
+
+    while ((ch = getopt_long(rsync_arg_idx, argv, opts, long_options, &option_index)) != -1) {
         switch (ch) {
-	case 'a':
-	    udr_options->start_port = atoi(optarg);
-	    break;
-	case 'd':
-	    udr_options->timeout = atoi(optarg);
-	    break;
-	case 'b':
-	    udr_options->end_port = atoi(optarg);
-	    break;
-	case 't':
-	    udr_options->tflag = 1;
-	    break;
-	case 'n':
-	    udr_options->encryption = true;
+        case 'P':
+            udr_options->ssh_port = atoi(optarg);
+            break;
+        case 'a':
+            udr_options->start_port = atoi(optarg);
+            break;
+        case 'd':
+            udr_options->timeout = atoi(optarg);
+            break;
+        case 'b':
+            udr_options->end_port = atoi(optarg);
+            break;
+        case 't':
+            udr_options->tflag = 1;
+            break;
+        case 'n':
+            udr_options->encryption = true;
             if (optarg) {
-		//fprintf(stderr, "the optarg %s\n", optarg);
             	snprintf(udr_options->encryption_type, PATH_MAX, "%s", optarg);
-	    }
-	    else
-    		snprintf(udr_options->encryption_type, PATH_MAX, "%s", "aes-128");
-	    break;
-	case 's':
-	    udr_options->sflag = 1;
-        snprintf(udr_options->port_num, NI_MAXSERV, "%s", optarg);
-	    break;
-	case 'l':
-        snprintf(udr_options->username, PATH_MAX, "%s", optarg);
-	    break;
-	case 'p':
-        snprintf(udr_options->key_filename, PATH_MAX, "%s", optarg);
-	    break;
-	case 'c':
-	    snprintf(udr_options->udr_program_dest, PATH_MAX, "%s", optarg);
-	    break;
-	case 'k':
-	    key_dir = optarg;
-	    break;
-	case 'v':
-	    udr_options->verbose = true;
-	    break;
-	case 'o':
-	    snprintf(udr_options->server_port, NI_MAXSERV, "%s", optarg);
-	    break;
+            } else {
+                snprintf(udr_options->encryption_type, PATH_MAX, "%s", "aes-128");
+            }
+            break;
+        case 's':
+            udr_options->sflag = 1;
+            snprintf(udr_options->port_num, NI_MAXSERV, "%s", optarg);
+            break;
+        case 'l':
+            snprintf(udr_options->username, PATH_MAX, "%s", optarg);
+            break;
+        case 'p':
+            snprintf(udr_options->key_filename, PATH_MAX, "%s", optarg);
+            break;
+        case 'c':
+            snprintf(udr_options->udr_program_dest, PATH_MAX, "%s", optarg);
+            break;
+        case 'k':
+            key_dir = optarg;
+            break;
+        case 'v':
+            udr_options->verbose = true;
+            break;
+        case 'o':
+            snprintf(udr_options->server_port, NI_MAXSERV, "%s", optarg);
+            break;
 
-	case 'i':
-	    udr_options->specify_ip = strdup(optarg);
-	    break;
+        case 'i':
+            udr_options->specify_ip = strdup(optarg);
+            break;
 
-    case 'x':
-        udr_options->server_connect = true;
-	case 0:
-	    if (strcmp("version", long_options[option_index].name) == 0) {
-		  udr_options->version_flag = true;
-	    }
-        else if (strcmp("config", long_options[option_index].name) == 0){
-            snprintf(udr_options->server_config, PATH_MAX, "%s", optarg);
+        case 'x':
+            udr_options->server_connect = true;
+        case 0:
+            if (strcmp("version", long_options[option_index].name) == 0) {
+                udr_options->version_flag = true;
+            }
+            else if (strcmp("config", long_options[option_index].name) == 0){
+                snprintf(udr_options->server_config, PATH_MAX, "%s", optarg);
+            }
+            else if (strcmp("rsync-uid", long_options[option_index].name) == 0){
+                udr_options->rsync_uid = atoi(optarg);
+            }
+            else if (strcmp("rsync-gid", long_options[option_index].name) == 0){
+                udr_options->rsync_gid = atoi(optarg);
+            }
+            break;
+        default:
+            fprintf(stderr, "Illegal argument: %c\n", ch);
+            usage();
         }
-        else if (strcmp("rsync-uid", long_options[option_index].name) == 0){
-            udr_options->rsync_uid = atoi(optarg);
-        }
-        else if (strcmp("rsync-gid", long_options[option_index].name) == 0){
-            udr_options->rsync_gid = atoi(optarg);
-        }
-	    break;
-	default:
-	    fprintf(stderr, "Illegal argument: %c\n", ch);
-	    usage();
-        }
+    }
 
     // verify that timeout duration > 0
     if (udr_options->timeout < 1){
@@ -205,45 +218,41 @@ int get_udr_options(UDR_Options * udr_options, int argc, char * argv[], int rsyn
     return 1;
 }
 
-void parse_host_username(char * source, char * username, char * host, bool * double_colon){
+void parse_host_username(char* source, char* username, char* host, bool* double_colon){
     char * colon_loc = strchr(source, ':');
     char * at_loc = strchr(source, '@');
-    int username_len, host_len;
-    username_len = host_len = 0;
+    int host_len = 0;
+    int username_len = 0;
 
-    if(colon_loc == NULL){
+    if (colon_loc == NULL){
         return;
     }
 
-    if(colon_loc[1] == ':'){
+    if (colon_loc[1] == ':'){
         *double_colon = true;
     }
 
-    //probably should check lengths here?
+    // probably should check lengths here?
     if (at_loc != NULL){
-//        fprintf(stderr, "at_loc: %d\n", at_loc);
         host_len = colon_loc - at_loc;
-//        fprintf(stderr, "host_len: %d\n", host_len);
 
-        //for now just set to PATH_MAX if greater -- but perhaps should throw an error? really shouldn't happen unless something bad is happening.
-        if(host_len > PATH_MAX)
-            host_len = PATH_MAX;
+        if (host_len > PATH_MAX) {
+            fprintf(stderr, "UDR ERROR: host_len > PATH_MAX");
+            exit(1);
+        }
 
         strncpy(host, at_loc+1, host_len-1);
         host[host_len-1] = '\0';
-//        fprintf(stderr, "host_len: %d host: %s\n", host_len, host);
 
-//        fprintf(stderr, "at_loc is not null\n");
         username_len = at_loc - source + 1;
 
-        if(username_len > PATH_MAX)
-            username_len = PATH_MAX;
+        if (username_len > PATH_MAX) {
+            fprintf(stderr, "UDR ERROR: username_len > PATH_MAX");
+            exit(1);
+        }
 
         strncpy(username, source, username_len-1);
         username[username_len-1] = '\0';
-
-//        fprintf(stderr, "username_len: %d username: %s\n", username_len, username);
-
     }
     else{
         host_len = colon_loc - source + 1;
@@ -252,7 +261,6 @@ void parse_host_username(char * source, char * username, char * host, bool * dou
 
         strncpy(host, source, host_len-1);
         host[host_len-1] = '\0';
-//        fprintf(stderr, "host_len: %d host: %s\n", host_len, host);;
     }
 
 }

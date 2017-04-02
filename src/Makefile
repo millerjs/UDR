@@ -32,20 +32,25 @@ ifeq ($(os), UNIX)
    LDFLAGS += -lsocket
 endif
 
+ifeq ($(os), OSX)
+   LDFLAGS += -I/usr/local/opt/openssl/include -L/usr/local/opt/openssl/lib
+   CCFLAGS += -I/usr/local/opt/openssl/include
+endif
+
 ifeq ($(os), SUNOS)
    LDFLAGS += -lrt -lsocket
 endif
 
 DIR = $(shell pwd)
 
-APP = version.h udr #test
+APP = version.h udr
 
 all: $(APP)
 
 version.h:
 	./version.sh
 
-%.o: %.cpp 
+%.o: %.cpp
 	$(C++) $(CCFLAGS) $< -c
 
 udr: udr.o udr_threads.o udr_util.o udr_options.o

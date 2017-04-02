@@ -1,6 +1,8 @@
 UDR
 ===
 
+[![Build Status](https://travis-ci.org/LabAdvComp/UDR.svg?branch=master)](https://travis-ci.org/LabAdvComp/UDR)
+
 UDR is a wrapper around rsync that enables rsync to use UDT.
 
 CONTENT
@@ -9,14 +11,14 @@ CONTENT
 ./udt:	   UDT source code, documentation and license
 
 TO MAKE
-------- 
-    make -e os=XXX arch=YYY 
+-------
+    make -e os=XXX arch=YYY
 
-XXX: [LINUX(default), BSD, OSX]   
-YYY: [IA32(default), POWERPC, IA64, AMD64]  
+XXX: [LINUX(default), BSD, OSX]
+YYY: [IA32(default), POWERPC, IA64, AMD64]
 
 ### Dependencies:
-OpenSSL (libssl and libcrypto)  
+OpenSSL (libssl and libcrypto)
 Currently, UDR has mainly been tested on Linux so your mileage may vary on another OS. UDT has been well tested on all of the provided options.
 
 USAGE
@@ -26,15 +28,15 @@ UDR must be on the client and server machines that data will be transferred betw
 ### Basic usage:
     udr [udr options] rsync [rsync options] src dest
 
-### UDR options: 
-[-a starting port number] default is 9000  
-[-b ending port number] default is 9100  
-[-n aes-128 | aes-192 | aes-256 | bf | des-ede3] turns on encryption, if crypto is not specified aes-128 is the default  
-[-p path] local path for the .udr_key file used for encryption, default is the current directory   
-[-c remote udr location] by default udr assumes that udr is in your path on the remote system, here you can specify the location explicitly  
+### UDR options:
+[-a starting port number] default is 9000
+[-b ending port number] default is 9100
+[-n aes-128 | aes-192 | aes-256 | bf | des-ede3] turns on encryption, if crypto is not specified aes-128 is the default
+[-p path] local path for the .udr_key file used for encryption, default is the current directory
+[-c remote udr location] by default udr assumes that udr is in your path on the remote system, here you can specify the location explicitly
 [-o server port] port to access a UDR server, default is 9000
-[-v] verbose mode, typically for debugging purposes  
-[--version] print out the version  
+[-v] verbose mode, typically for debugging purposes
+[--version] print out the version
 [-d timeout] specify duration in seconds in which to kill remaining threads if no data is transfered after connected, default is 15s
 [-i ip] specify the interface by ip that the remote process will bind to
 
@@ -57,9 +59,9 @@ The UDR server allows UDR transfers for users without accounts, similar to rsync
     python udrserver.py [-v] [-s] [-c configfile] start|stop|restart|foreground
 
 ### UDR server options:
-[-c config file] specify the location of the config file, default is /etc/udrd.conf  
-[-s] silent mode, don't print message on start|stop|restart  
-[-v] verbose mode, mainly for debugging purposes  
+[-c config file] specify the location of the config file, default is /etc/udrd.conf
+[-s] silent mode, don't print message on start|stop|restart
+[-v] verbose mode, mainly for debugging purposes
 
 
 ### UDR server configuration:
@@ -75,7 +77,7 @@ The UDR server requires a configuration file, by default it looks for /etc/udrd.
 - udr: path to udr command, default is udr
 - rsyncd conf: rsyncd.conf file to use for the rsync part of the configuration
 - uid: user name or uid that the server should run as when started as root, default is nobody when run as root
-- gid: group name or gid that the server should run as when started as root, default is nogroup when run as root 
+- gid: group name or gid that the server should run as when started as root, default is nogroup when run as root
 - specify ip: IP address for udr receiver to bind to, default is any connected interface
 
 Most standard rsyncd.conf options should work like normal. Known exceptions are:
@@ -98,7 +100,4 @@ To connect to the UDR server, use double colons instead of the single colon, sim
     udr rsync hostname.com::
 
 ### List files on server:
-    udr rsync hostname.com::module/path/to/file 
-
-
-
+    udr rsync hostname.com::module/path/to/file
